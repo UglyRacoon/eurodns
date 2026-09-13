@@ -1,7 +1,12 @@
 #!/bin/bash
 # EuroDNS generator: turns /opt/smartdns/domains.txt into
-#   - /etc/dnsmasq.d/10-smartdns-domains.conf        (address=/DOMAIN/IP for IPv4+IPv6)
-#   - /etc/nginx/smartdns/geo-map.inc                (nginx stream map regex entries)
+#   - /etc/dnsmasq.d/10-smartdns-domains.conf  (address=/DOMAIN/IP fallback for the
+#     :5353 forwarder; the authoritative eurodns-resolver on :53 answers geo names,
+#     incl. the A/AAAA + HTTPS/SVCB records, before anything reaches dnsmasq)
+#   - /etc/nginx/smartdns/geo-map.inc          (nginx stream map: SNI -> real backend)
+#
+# The resolver reads domains.txt directly, so after editing it run this (for the nginx
+# map) and `systemctl restart eurodns-resolver` (for the DNS/SVCB side).
 #
 # Reads the proxy IPs from /opt/smartdns/env.conf (written by deploy.sh).
 set -euo pipefail

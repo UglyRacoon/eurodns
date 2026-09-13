@@ -1,0 +1,20 @@
+[Unit]
+Description=EuroDNS authoritative resolver (A/AAAA/SVCB for geo domains, forwards the rest)
+Documentation=https://github.com/UglyRacoon/eurodns
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/smartdns/env.conf
+Environment=DNS_UPSTREAM_HOST=127.0.0.1
+Environment=DNS_UPSTREAM_PORT=5353
+Environment=RESOLVER_PORT=53
+Environment=DOMAINS_FILE=/opt/smartdns/domains.txt
+ExecStart=/usr/bin/python3 /opt/smartdns/smartdns-resolver.py
+Restart=always
+RestartSec=1
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

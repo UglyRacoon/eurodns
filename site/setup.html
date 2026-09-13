@@ -55,13 +55,12 @@ footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--mut);mar
 <div class="card" style="border-color:#4a3a10;background:#1b1710">
 <b>❗ Если на телефоне всё равно пишет «not supported in your country»</b>
 <ol>
-  <li>Откройте <a href="/test/">страницу проверки</a> именно в том браузере, где не открывается Gemini. Если она показывает <b>Россию</b> — браузер <b>не использует EuroDNS</b>. Это главная причина: смена «Частного DNS» в настройках Android <b>не применяется к Chrome и приложениям Google</b> — они резолвят сами.</li>
-  <li><b>Самый надёжный способ на телефоне</b> — прописать DNS <code class="k">147.45.114.74</code> не как «Частный DNS», а как <b>DNS-сервер в сети Wi-Fi</b> (долгое нажатие на сеть → Изменить → Показано доп. → Параметры IP → Статический → DNS 1 = <code class="k">147.45.114.74</code>), либо на <b>роутере</b>. Тогда его используют все приложения и браузер.</li>
-  <li><b>Отдельно в браузере</b>: Chrome → Настройки → Конфиденциальность и безопасность → Безопасность → «Использовать безопасный DNS» → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</li>
-  <li><b>Выключите QUIC/HTTP/3 в Chrome</b> (иначе Google-запросы идут по UDP мимо TCP-прокси): откройте <code class="k">chrome://flags/#enable-quic</code> → <b>Disabled</b> → перезапуск Chrome.</li>
-  <li><b>Сбросьте кэш Chrome</b> (в нём законсервированы реальные IP Google и ECH/Alt-Svc): <code class="k">chrome://net-internals/#dns</code> → «Clear host cache», и <code class="k">chrome://net-internals/#sockets</code> → «Flush socket pools», затем закрыть и открыть Chrome заново.</li>
-  <li>iOS: установите профиль <a href="/ios/eurodns.mobileconfig">eurodns.mobileconfig</a> (DoH) — он применяется ко всем приложениям; либо DNS <code class="k">147.45.114.74</code> в настройках Wi-Fi.</li>
-  <li>Некоторые сети блокируют <b>853 (DoT)</b> — тогда DoH (п.3) работает, т.к. идёт по 443. Порт <b>UDP 443</b> на сервере может быть занят другим сервисом — из-за этого и нужно отключать QUIC (п.4).</li>
+  <li>Откройте <a href="/test/">страницу проверки</a> именно в том браузере, где не открывается Gemini. Если она показывает <b>Россию</b> — браузер <b>не использует EuroDNS</b>. Решение — заставить его использовать наш DNS (п.2–3).</li>
+  <li><b>Надёжнее всего</b> — прописать DNS <code class="k">147.45.114.74</code> как <b>DNS-сервер в сети Wi-Fi</b> (долгое нажатие на сеть → Изменить → Показано доп. → Параметры IP → Статический → DNS 1 = <code class="k">147.45.114.74</code>) или на <b>роутере</b>. Тогда его используют все приложения и браузер.</li>
+  <li><b>Private DNS (DoT)</b> тоже работает и в Chrome, и в приложениях Google: Настройки → Сеть и Интернет → Частный DNS → <code class="k">smartdns.147-45-114-74.sslip.io</code>. Сервер отдаёт запись <code>SVCB</code> (<code>alpn=h2</code>), поэтому QUIC/HTTP3, ECH и кэш больше не мешают — отключать QUIC и чистить кэш <b>не нужно</b>.</li>
+  <li>Если провайдер режет порт 853 — включите в Chrome безопасный DNS (DoH): Настройки → Конфиденциальность и безопасность → Безопасность → «Использовать безопасный DNS» → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</li>
+  <li>iOS: профиль <a href="/ios/eurodns.mobileconfig">eurodns.mobileconfig</a> (DoH) применяется ко всем приложениям; либо DNS <code class="k">147.45.114.74</code> в настройках Wi-Fi.</li>
+  <li>Редко: если отдельное приложение упрямится — перезапустите его (иногда помогает «Clear host cache» в <code class="k">chrome://net-internals/#dns</code>). Это не обязательно.</li>
 </ol>
 </div>
 
@@ -111,15 +110,10 @@ footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--mut);mar
   <li>Удерживайте подключённую сеть Wi-Fi → <b>«Изменить сеть»</b> → <b>«Дополнительно»</b> → <b>Настройки IP: «Статический»</b>.</li>
   <li><b>DNS 1:</b> <code class="k">147.45.114.74</code> · <b>DNS 2:</b> <code class="k">2a0d:6c2:17:51b::</code> (или только IPv4). Сохранить.</li>
 </ol>
-<p style="margin-top:.6em"><b>Способ 2 — Private DNS (шифрованный DoT):</b> Настройки → Сеть и Интернет → Дополнительно → <b>Частный DNS</b> → «Имя хоста поставщика»:</p>
+<p style="margin-top:.6em"><b>Способ 2 — Private DNS (шифрованный DoT) — работает и в Chrome, и в приложениях Google:</b> Настройки → Сеть и Интернет → Дополнительно → <b>Частный DNS</b> → «Имя хоста поставщика»:</p>
 <div class="code"><span>smartdns.147-45-114-74.sslip.io</span><button class="copy" data-copy="smartdns.147-45-114-74.sslip.io">копировать</button></div>
-<div class="bad"><b>Важно:</b> Chrome и приложения Google <b>игнорируют</b> системный Private DNS и резолвят по-своему. Поэтому для браузера дополнительно сделайте:</div>
-<ol>
-  <li><b>Безопасный DNS в Chrome:</b> Настройки → Конфиденциальность и безопасность → Безопасность → «Использовать безопасный DNS» → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</li>
-  <li><b>Выключите QUIC:</b> <code class="k">chrome://flags/#enable-quic</code> → <b>Disabled</b> → перезапуск (иначе часть Google-запросов идёт по UDP мимо прокси).</li>
-  <li><b>Сбросьте кэш Chrome:</b> <code class="k">chrome://net-internals/#dns</code> → Clear host cache, и <code class="k">chrome://net-internals/#sockets</code> → Flush socket pools.</li>
-</ol>
-<div class="note">Для мобильного интернета (не Wi-Fi) способ 1 недоступен без root — используйте роутер или Chrome-DoH (пункты выше). Полный разбор «почему с телефона не работает, а с сервера да» — в README/FAQ.</div></div>
+<div class="note"><b>Никаких доп. настроек не нужно.</b> Сервер отдаёт запись <code>HTTPS/SVCB</code> (<code>alpn=h2</code> + адрес нашего прокси), поэтому Chrome и приложения Google сами идут на EuroDNS по HTTP/2 — протоколы QUIC/HTTP3, ECH и старый кэш больше не мешают. Отключать QUIC, чистить кэш или ставить флаги не требуется.</div>
+<div class="note">Если провайдер блокирует порт 853, включите в Chrome безопасный DNS (DoH) → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>. Для мобильного интернета (не Wi-Fi) используйте именно этот способ 2 — он действует на весь трафик без root.</div>
 
 <h2 id="ios">📱 iPhone / iPad (iOS 14+)</h2>
 <div class="card">

@@ -35,16 +35,22 @@ fully-scripted stack you can deploy on **any** Linux server in a few minutes.
         │                                  │  to the REAL gemini.google.com   │
 ```
 
-1. **DNS rewrite.** `dnsmasq` returns the *proxy's own public IP* for every domain in
-   [`domains.txt`](domains.txt); all other names are resolved normally (Cloudflare/Google
-   upstreams).
+1. **DNS rewrite + SVCB hint.** The authoritative resolver (a small `python` service on
+   `:53`) returns the *proxy's own public IP* for every domain in
+   [`domains.txt`](domains.txt). Critically, for those names it also synthesises a
+   **`HTTPS`/`SVCB` record** (`alpn=h2` + `ipv4hint`/`ipv6hint` = proxy IP). That record
+   is what makes a **plain "just set the DNS" setup work**: the client's browser/OS reads
+   it and connects straight to our IP over **HTTP/2**, so QUIC (UDP/443), ECH and any
+   cached Google `Alt-Svc`/`HTTPS` hints never get a chance to bypass the proxy. All
+   other names are forwarded to an upstream resolver normally.
 2. **Transparent SNI proxy.** `nginx` in `stream` mode reads the TLS **SNI** via
    `ssl_preread` and forwards the raw TCP session to the *real* backend. Because the
    connection to the backend is opened **from the EU server**, the backend sees an
    EU source IP and serves the un-restricted content. **No MITM, no certificate
    pinning issues** — the client's own TLS verification still passes end-to-end.
 3. **Encrypted DNS.** The same server offers **DNS-over-HTTPS** and **DNS-over-TLS**
-   (a small Python backend + `stunnel`) so clients can hide their DNS from the ISP.
+   (`stunnel` → `:53`); those paths also carry the SVCB hint from step 1, so Private-DNS
+   / DoH clients work identically to plain DNS.
 
 Everything normal to your traffic stays direct — only the geo domains are routed
 through the proxy, so you keep full line speed.
@@ -61,8 +67,10 @@ eurodns/
 ├─ domains.txt                   # the list of geo-restricted domains to unblock
 ├─ backend/
 │  └─ smartdns_backend.py        # DoH (/dns-query) + self-test API (/api/selftest)
+├─ resolver/
+│  └─ smartdns-resolver.py       # authoritative :53 — A/AAAA + SVCB(alpn=h2, hints=proxy IP) for geo domains, forwards the rest to :5353
 ├─ conf/                         # nginx / dnsmasq / stunnel templates (tokens substituted)
-│  ├─ dnsmasq.conf
+│  ├─ dnsmasq.conf               # local forwarder on 127.0.0.1:5353 (the resolver owns public :53)
 │  ├─ stream-map.conf            # map SNI -> backend (incl. generated geo-map.inc)
 │  ├─ stream-server.conf         # transparent proxy on :443
 │  ├─ site-http.conf             # website + DoH :80->:443(8448) server
@@ -141,8 +149,9 @@ Edit `domains.txt` (one second-level domain per line — subdomains are covered
 automatically), then:
 
 ```bash
-/opt/smartdns/build.sh && systemctl restart dnsmasq && nginx -t && systemctl reload nginx
+/opt/smartdns/build.sh && systemctl restart eurodns-resolver dnsmasq && nginx -t && systemctl reload nginx
 ```
+The resolver re-reads `domains.txt` on start, so it is what actually needs the restart.
 
 ---
 
@@ -158,9 +167,13 @@ A device-side check is what actually proves the unblock. Three ways, most→leas
    # BOTH must return the proxy IP — googleapis is the one that gates Gemini:
    dig @<your-IPv4> gemini.google.com                  +short   # -> <your-IPv4>
    dig @<your-IPv4> generativelanguage.googleapis.com  +short   # -> <your-IPv4>  (NOT a 172.217.x RU edge)
+   # and the client must also be served the SVCB hint that forces Chrome onto the proxy:
+   kdig @<your-IPv4> -t HTTPS generativelanguage.googleapis.com +short   # -> 1 . alpn="h2" ipv4hint=<your-IPv4> ...
    ```
-   If `generativelanguage.googleapis.com` returns a real Google IP, add it (it is
-   already in `domains.txt`); without it Gemini keeps showing "not supported…".
+   (Older `dig` prints `FORMERR` on `ipv4hint`/`ipv6hint` even though the record is valid —
+   use `kdig`/`getdnsapi` or a real browser to inspect it.) If
+   `generativelanguage.googleapis.com` returns a real Google IP, add it (it is already in
+   `domains.txt`); without it Gemini keeps showing "not supported…".
 3. **The egress is seen as EU by Google** — confirm once, then forget it: open
    `https://gemini.google.com` **on the server itself** (or `whoer.net`). Unblocked there =
    your provider/IP is clean, and any block on a client is purely a coverage gap. You can
@@ -173,52 +186,39 @@ A device-side check is what actually proves the unblock. Three ways, most→leas
 
 ---
 
-## Why it works **from the server** but not **on the phone** (deep dive)
+## Why "just enter the DNS" is enough (the SVCB mechanism)
 
-You can open `gemini.google.com` fine on the EU box, yet the same service fails on a
-RU phone — even though both are "EuroDNS". The provider/IP is **not** the issue. The
-difference is the **client's DNS + transport path**, which a TCP-SNI Smart DNS can't
-control by itself:
+The old problem with a pure TCP `ssl_preread` SNI proxy is that it can't *force* the client
+to use the proxy for everything. Modern browsers prefer **HTTP/3 (QUIC / UDP 443)** and keep
+**ECH** / `Alt-Svc` / `HTTPS` hints cached from earlier direct connections to Google. A plain
+`address=/domain/IP` answer wasn't enough: a warm browser would QUIC straight to Google's
+*real* IP and never touch our proxy — so the region check saw the client's real (RU) IP.
 
-1. **Coverage (the only server-side bug, now fixed).** Google's region check does not run
-   on `gemini.google.com` — the page makes a second request to `*.googleapis.com`
-   (`generativelanguage.googleapis.com`, `*.clients6.google.com`, …) plus `gstatic` /
-   `googleusercontent` / YouTube. If only `google.com` is proxied, that region call reaches
-   Google **directly from the client's real (RU) IP** → "unsupported". EuroDNS now maps the
-   whole Google family (incl. `googleapis`, `gstatic`, `googleusercontent`, `youtube`,
-   `google.ru`, `google.dev`). `dig @IP generativelanguage.googleapis.com` must return the
-   proxy IP; verify after any change.
+EuroDNS fixes this at the **DNS layer itself**, the same way commercial Smart-DNS (e.g.
+xbox-dns.ru) do. For every proxied name it returns, alongside `A`/`AAAA`, a synthesised
+**`HTTPS`/`SVCB` record**: `alpn=h2` with `ipv4hint`/`ipv6hint` = our proxy IP. The client
+reads that authoritative hint and connects **directly to our IP over HTTP/2**, *before* any
+QUIC / ECH / cached-Google-IP behaviour can take effect. So you enter the DNS — plain IPv4,
+Private DNS (DoT) or Chrome secure-DNS (DoH) — and Gemini/Google/YouTube just work in a real
+browser, with **no flags, no QUIC-off, no cache flush, no profile/CA install**.
 
-2. **Chrome / Google apps ignore Android "Private DNS" (DoT).** This is the #1 reason a
-   phone "uses" your DNS but stays blocked: Chrome and the Google/Gemini/YT apps resolve via
-   their own resolver, so they never query your DoT. Set the DNS as the **Wi‑Fi static DNS
-   server (147.45.114.74)** or the **router DNS** (used by every app), and/or set **Chrome →
-   Settings → Security → Use secure DNS → Custom → `https://smartdns.147-45-114-74.sslip.io/dns-query`**.
+What a client should point at EuroDNS (all three are now equivalent):
 
-3. **HTTP/3 / QUIC bypasses a TCP-only proxy.** Google serves almost everything over `h3`
-   (QUIC/UDP 443). Our proxy is TCP (`ssl_preread`), so QUIC to our IP lands on whatever
-   already holds UDP 443 on the box (here: hysteria) → fails; worse, Chrome caches
-   `Alt-Svc`/`SVCB` hints pointing at **Google's real IPs** and then connects QUIC **directly
-   to Google (RU)**, bypassing the DNS entirely. **Fix on the device:** disable QUIC
-   (`chrome://flags/#enable-quic` → Disabled) and **flush Chrome's cache**
-   (`chrome://net-internals/#dns` → Clear host cache; `#sockets` → Flush socket pools), then
-   reopen. (ECH has the same effect: a cached ECH config encrypts the SNI so `ssl_preread`
-   can't route it. EuroDNS returns NODATA for `HTTPS`/`SVCB` on mapped names so clients don't
-   *learn* ECH — but a pre-existing cache only clears by flushing.)
+* **Wi‑Fi / router static DNS = `147.45.114.74`** — most reliable; every app + browser honors it.
+* **Private DNS (DoT) = `smartdns.<host>`** — works in Chrome and Google apps too.
+* **Chrome secure-DNS DoH = `https://<host>/dns-query`** — for locked-down networks.
 
-**Net:** the server is identical in both cases — it's the client. The recipe that makes a
-phone work: **router/ Wi‑Fi DNS = 147.45.114.74** (or Chrome secure-DNS DoH) **+ disable
-QUIC + clear Chrome caches**. A fresh device/router (no Google-IP cache) needs only the
-DNS; an already-warm phone needs the cache flush too. This is exactly why another provider
-"just worked" — it was applied as the real DNS the browser honors.
+Only if a *specific* long-used app misbehaves is a one-off "Clear host cache"
+(`chrome://net-internals/#dns`) + restart helpful — it is no longer required.
 
 ---
 
 ## Operations
 
-* **Status:** `systemctl status dnsmasq nginx smartdns-backend eurodns-dot`
-* **Logs:** `journalctl -u smartdns-backend -u eurodns-dot -f`; nginx access log for the
-  SNI proxy at `/var/log/nginx/stream-access.log`.
+* **Status:** `systemctl status eurodns-resolver dnsmasq nginx smartdns-backend eurodns-dot`
+* **Logs:** `journalctl -u eurodns-resolver -u smartdns-backend -u eurodns-dot -f`; nginx
+  access log for the SNI proxy at `/var/log/nginx/stream-access.log`.
+* **Resolver owns public :53; dnsmasq is a loopback forwarder on `127.0.0.1:5353`.**
 * **Certificate renewal:** handled by `certbot`'s systemd timer; the deploy hook
   (`/etc/letsencrypt/renewal-hooks/deploy/00-eurodns.sh`) reloads nginx + DoT.
 * **Config lives on the server** under `/opt/smartdns` (env), `/etc/nginx`, `/etc/dnsmasq.d`,
@@ -263,8 +263,8 @@ and add the `server{}` once, so there is exactly **one** `stream{}` in the whole
 | DoH/DoT cert error | `<host>` doesn't resolve to the server, or :80 blocked. Re-run `deploy.sh` after fixing DNS. |
 | DNS returns real IP, not yours | Something else owns :53 (resolved/other). Check `ss -lntup \| grep :53`. |
 | nginx: `duplicate "stream" directive` | A `stream{}` already exists — see *Coexisting with existing fronting*. |
-| Google "unsupported in your country" **on a phone** but fine on the server | The server/IP is fine; it's the client path. 99%: the phone's browser **isn't actually using your DNS** (Android Private DNS is ignored by Chrome/apps) **and/or** it uses **HTTP/3 (QUIC)** which a TCP proxy can't serve. See *"Why it works from the server but not on the phone"*. Fix: set DNS as **Wi‑Fi/router DNS = `147.45.114.74`** (or Chrome secure-DNS DoH), **disable QUIC** (`chrome://flags/#enable-quic` → Disabled), **flush Chrome caches** (`chrome://net-internals/#dns` + `#sockets`). If `dig @IP generativelanguage.googleapis.com` shows the proxy IP, coverage is OK. |
-| Works on desktop, not phone in Chrome | Chrome ignores system Private DNS — set the DoH URL inside Chrome's *Secure DNS*. |
+| Google "unsupported in your country" **on a phone** but fine on the server | The server/IP is fine — it's the client path. 99% the device simply **isn't using your DNS**: point **Wi‑Fi/router static DNS = `147.45.114.74`** or **Private DNS (DoT) = `smartdns.<host>`** (both now force HTTP/2 via the SVCB hint, so QUIC/ECH/cache are no longer an issue). Verify: `dig @<IPv4> generativelanguage.googleapis.com` and `kdig @<IPv4> -t HTTPS …` both point at your IP. |
+| Works on desktop, not phone in Chrome | Chrome is now told to use our IP via the `HTTPS`/`SVCB` record, so plain Wi‑Fi DNS or Private DNS is enough. If a specific already-warm app still misbehaves, "Clear host cache" in `chrome://net-internals/#dns` once. |
 
 ---
 

@@ -1,6 +1,6 @@
 [Unit]
-Description=EuroDNS DNS-over-TLS (DoT) endpoint via stunnel -> dnsmasq
-After=network-online.target
+Description=EuroDNS DNS-over-TLS (DoT) endpoint via stunnel -> resolver:53
+After=network-online.target eurodns-resolver.service
 Wants=network-online.target
 
 [Service]

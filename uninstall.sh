@@ -42,7 +42,7 @@ fi
 cat <<EOM
 EuroDNS uninstaller.
 
-  Services it will stop/remove : smartdns-backend, eurodns-dot
+  Services it will stop/remove : eurodns-resolver, smartdns-backend, eurodns-dot
   Config it will remove         : dnsmasq geo map, nginx site + stream include, stunnel conf
   Certificate host              : ${MGMT_HOST:-<unknown: run on the same server>}
   Website dir                   : /var/www/smartdns
@@ -58,7 +58,7 @@ fi
 
 # ---------------------------------------------------------------------------
 log "Stopping + disabling systemd units"
-for u in smartdns-backend eurodns-dot; do
+for u in eurodns-resolver smartdns-backend eurodns-dot; do
   if systemctl list-unit-files --type=service 2>/dev/null | grep -q "^${u}.service"; then
     run "systemctl stop ${u} || true"
     run "systemctl disable ${u} || true"
@@ -102,7 +102,7 @@ fi
 
 # ---------------------------------------------------------------------------
 log "Removing stunnel (DoT) configuration"
-rm -f /etc/stunnel/eurodns-dot.conf
+rm -f /etc/stunnel/eurodns-dot.conf /etc/stunnel/dot.conf /etc/stunnel/smartdns-dot.conf
 
 # ---------------------------------------------------------------------------
 log "Removing certbot deploy hook"
@@ -137,6 +137,6 @@ cat <<EOM
     - apt packages (system may share them)   -> use --purge-packages to remove
     - nginx/dnsmasq/stunnel programs         -> re-enable them if you disabled other services
   Verify nothing EuroDNS-owned remains:
-    systemctl status smartdns-backend eurodns-dot
+    systemctl status eurodns-resolver smartdns-backend eurodns-dot
     ls /etc/nginx/stream-enabled /etc/dnsmasq.d /opt/smartdns /var/www/smartdns
 EOM
