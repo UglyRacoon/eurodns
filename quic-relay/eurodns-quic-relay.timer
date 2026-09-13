@@ -1,0 +1,10 @@
+[Unit]
+Description=Refresh EuroDNS QUIC relay target IP hourly
+
+[Timer]
+OnBootSec=30
+OnUnitActiveSec=1h
+Unit=eurodns-quic-relay.service
+
+[Install]
+WantedBy=timers.target

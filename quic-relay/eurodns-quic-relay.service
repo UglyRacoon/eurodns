@@ -1,0 +1,12 @@
+[Unit]
+Description=EuroDNS QUIC/HTTP-3 relay (UDP/443 -> Google front-end, EU exit)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/smartdns/quic-relay.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
