@@ -134,16 +134,18 @@ def parse_msg(msg):
             "rd": bool(flags & 0x0100), "edns": edns, "bufsize": bufsize, "do": do}
 
 def svcb_rdata():
-    # SVCB/HTTPS RDATA: Priority (2) + TargetName ("." = ".") + SvcParams.
-    # SvcParam keys: 1=mandatory 2=alpn 3=no-default-alpn 4=port 5=ipv4hint 6=ipv6hint.
+    # SVCB/HTTPS RDATA (RFC 9460 SvcParam keys):
+    #   0 mandatory, 1 alpn, 2 no-default-alpn, 3 port, 4 ipv4hint, 5 ipv6hint, 6 ech
+    # Target "." (root). Force HTTP/2 via alpn=h2 so Chrome tunnels via us over TCP
+    # instead of QUIC/HTTP-3 (which would otherwise race to the real Google edge).
     rd = struct.pack(">H", 1) + b"\x00"        # priority 1, SvcDomainName = root
     def pv(k, v):
         return struct.pack(">HH", k, len(v)) + v
-    params = [pv(2, bytes([2]) + b"h2")]        # alpn=h2  (force HTTP/2, no QUIC)
+    params = [pv(1, bytes([2]) + b"h2")]        # key 1 = alpn=h2
     if IPV4:
-        params.append(pv(5, socket.inet_aton(IPV4)))      # ipv4hint = proxy IP
-    if IPV6:
-        params.append(pv(6, socket.inet_pton(socket.AF_INET6, IPV6)))  # ipv6hint = proxy IP
+        params.append(pv(4, socket.inet_aton(IPV4)))      # key 4 = ipv4hint = proxy IP
+    # No ipv6hint (key 5): our box IPv6 egress is Geo-tagged RU by Google, so we pin
+    # clients to the proven-EU IPv4 path only (xbox returns A/IPv4 only as well).
     return rd + b"".join(params)
 
 def answer_for(qtype):
@@ -151,7 +153,11 @@ def answer_for(qtype):
     if qtype == T_A:
         return [(T_A, socket.inet_aton(IPV4))] if IPV4 else []
     if qtype == T_AAAA:
-        return [(T_AAAA, socket.inet_pton(socket.AF_INET6, IPV6))] if IPV6 else []
+        # Do NOT synthesize an IPv6 answer for mapped hosts. Our box's IPv6
+        # (2a0d:6c2:...) is Geo-tagged RU by Google, and mobile Chrome's happy
+        # eyeballs otherwise prefers IPv6 -> RU egress -> region gate trips.
+        # xbox returns no AAAA here; we pin the client to our proven-EU IPv4 A.
+        return []
     if qtype == T_HTTPS:
         return [(T_HTTPS, svcb_rdata())]
     if qtype in (T_A, T_AAAA, T_HTTPS):
