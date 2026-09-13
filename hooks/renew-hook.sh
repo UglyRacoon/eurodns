@@ -4,6 +4,6 @@
 set -e
 if command -v systemctl >/dev/null 2>&1; then
     systemctl reload-or-restart nginx        || true
-    systemctl restart    eurodns-dot || true
+    systemctl restart    eurodns-resolver      || true
 fi
 exit 0

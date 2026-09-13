@@ -154,6 +154,9 @@ DNS_UPSTREAM_HOST=127.0.0.1
 DNS_UPSTREAM_PORT=5353
 RESOLVER_PORT=53
 DOMAINS_FILE=/opt/smartdns/domains.txt
+DOT_CERT=/etc/letsencrypt/live/$MGMT_HOST/fullchain.pem
+DOT_KEY=/etc/letsencrypt/live/$MGMT_HOST/privkey.pem
+DOT_PORT=853
 EOF
 chmod 600 /opt/smartdns/env.conf
 
@@ -236,25 +239,16 @@ fi
 install -D -m 755 "$SCRIPT_DIR/hooks/renew-hook.sh" /etc/letsencrypt/renewal-hooks/deploy/00-eurodns.sh
 
 # ---------------------------------------------------------------------------
-# 8. DoT (stunnel) + backend units
+# 8. Backend unit. DNS-over-TLS is served NATIVELY by the resolver (:853 with
+#    ALPN=dot, real LE cert) — no stunnel needed. env.conf already carries
+#    DOT_CERT/DOT_KEY/DOT_PORT, so (re)starting the resolver turns DoT on.
 # ---------------------------------------------------------------------------
-if [ -n "$STUNNEL_BIN" ]; then
-  log "Configuring DNS-over-TLS (stunnel) on :853"
-  render "$SCRIPT_DIR/conf/stunnel-dot.conf" /etc/stunnel/eurodns-dot.conf \
-     "MGMT_HOST=$MGMT_HOST" "STUNNEL_IPV6="
-  # point the unit at the stunnel binary actually present on this box
-  sed "s#/usr/bin/stunnel #${STUNNEL_BIN} #" "$SCRIPT_DIR/systemd/stunnel-dot.service" \
-      > /etc/systemd/system/eurodns-dot.service
-  cp -f "$SCRIPT_DIR/systemd/smartdns-backend.service" /etc/systemd/system/smartdns-backend.service
-  systemctl daemon-reload
-  systemctl enable eurodns-dot smartdns-backend >/dev/null 2>&1 || true
-  systemctl restart eurodns-dot 2>/dev/null || warn "stunnel DoT failed to start (see: journalctl -u eurodns-dot)"
-else
-  cp -f "$SCRIPT_DIR/systemd/smartdns-backend.service" /etc/systemd/system/smartdns-backend.service
-  systemctl daemon-reload
-  systemctl enable smartdns-backend >/dev/null 2>&1 || true
-fi
-systemctl restart smartdns-backend nginx
+cp -f "$SCRIPT_DIR/systemd/smartdns-backend.service" /etc/systemd/system/smartdns-backend.service
+systemctl daemon-reload
+systemctl enable smartdns-backend eurodns-resolver >/dev/null 2>&1 || true
+# legacy stunnel DoT unit is unused now; make sure it is not stealing :853
+systemctl disable --now eurodns-dot stunnel-dot 2>/dev/null || true
+systemctl restart smartdns-backend nginx eurodns-resolver
 
 # ---------------------------------------------------------------------------
 # 9. Firewall hints (no-op if none active)
@@ -278,10 +272,11 @@ cat <<EOF
   Selftest: https://$MGMT_HOST/api/selftest
 EOF
 echo
-if [ -n "$STUNNEL_BIN" ] && [ -s "$CERT_DIR/fullchain.pem" ]; then
+if [ -s "$CERT_DIR/fullchain.pem" ]; then
   echo "Test it:  dig @${IPV4} gemini.google.com +short   (expect: $IPV4)"
+  echo "          dig @${IPV4} -t HTTPS gemini.google.com (expect: alpn=h2 ipv4hint=$IPV4)"
   echo "          curl -s https://$MGMT_HOST/api/selftest | head -c 200; echo"
 else
-  warn "TLS cert or stunnel missing — DoH/DoT may not be live yet. Re-run after fixing DNS :80 reachability."
+  warn "TLS cert missing — DoH/DoT may not be live yet. Re-run after fixing DNS :80 reachability (certbot)."
 fi
 echo "Manage domains: edit /opt/smartdns/domains.txt, then: /opt/smartdns/build.sh && systemctl restart eurodns-resolver dnsmasq && systemctl reload nginx"

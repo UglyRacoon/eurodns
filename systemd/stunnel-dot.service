@@ -1,5 +1,7 @@
 [Unit]
-Description=EuroDNS DNS-over-TLS (DoT) endpoint via stunnel -> resolver:53
+Description=EuroDNS DNS-over-TLS (LEGACY: stunnel) — UNUSED
+# DoT is now served NATIVELY by eurodns-resolver on :853 (ALPN=dot, real LE cert).
+# This unit is kept only for reference; deploy.sh no longer installs it.
 After=network-online.target eurodns-resolver.service
 Wants=network-online.target
 

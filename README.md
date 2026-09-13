@@ -49,9 +49,10 @@ fully-scripted stack you can deploy on **any** Linux server in a few minutes.
    connection to the backend is opened **from the EU server**, the backend sees an
    EU source IP and serves the un-restricted content. **No MITM, no certificate
    pinning issues** — the client's own TLS verification still passes end-to-end.
-3. **Encrypted DNS.** The same server offers **DNS-over-HTTPS** and **DNS-over-TLS**
-   (`stunnel` → `:53`); those paths also carry the SVCB hint from step 1, so Private-DNS
-   / DoH clients work identically to plain DNS.
+3. **Encrypted DNS.** The resolver also terminates **DNS-over-TLS** natively on `:853`
+   (with ALPN `dot` and a real Let's Encrypt cert, so Android's strict Private-DNS
+   validator accepts it), and nginx exposes **DNS-over-HTTPS**. Both paths carry the same
+   SVCB hint from step 1, so Private-DNS / DoH clients work identically to plain DNS.
 
 Everything normal to your traffic stays direct — only the geo domains are routed
 through the proxy, so you keep full line speed.
@@ -70,14 +71,13 @@ eurodns/
 │  └─ smartdns_backend.py        # DoH (/dns-query) + self-test API (/api/selftest)
 ├─ resolver/
 │  └─ smartdns-resolver.py       # authoritative :53 — A/AAAA + SVCB(alpn=h2, hints=proxy IP) for geo domains, forwards the rest to :5353
-├─ conf/                         # nginx / dnsmasq / stunnel templates (tokens substituted)
+├─ conf/                         # nginx / dnsmasq templates (tokens substituted)
 │  ├─ dnsmasq.conf               # local forwarder on 127.0.0.1:5353 (the resolver owns public :53)
 │  ├─ stream-map.conf            # map SNI -> backend (incl. generated geo-map.inc)
 │  ├─ stream-server.conf         # transparent proxy on :443
-│  ├─ site-http.conf             # website + DoH :80->:443(8448) server
-│  └─ stunnel-dot.conf           # DoT :853 -> local :53
-├─ systemd/                      # service units (backend + DoT)
-├─ hooks/renew-hook.sh           # certbot deploy hook (reload nginx + DoT)
+│  └─ site-http.conf             # website + DoH :80->:443(8448) server
+├─ systemd/                      # service units (resolver + backend)
+├─ hooks/renew-hook.sh           # certbot deploy hook (reload nginx + resolver)
 └─ site/                         # the public website (index, setup, test, terms, privacy, iOS profile)
    ├─ index.html
    ├─ setup.html                 # per-device connection guide
@@ -216,24 +216,25 @@ Only if a *specific* long-used app misbehaves is a one-off "Clear host cache"
 
 ## Operations
 
-* **Status:** `systemctl status eurodns-resolver dnsmasq nginx smartdns-backend eurodns-dot`
-* **Logs:** `journalctl -u eurodns-resolver -u smartdns-backend -u eurodns-dot -f`; nginx
-  access log for the SNI proxy at `/var/log/nginx/stream-access.log`.
-* **Resolver owns public :53; dnsmasq is a loopback forwarder on `127.0.0.1:5353`.**
+* **Status:** `systemctl status eurodns-resolver dnsmasq nginx smartdns-backend`
+* **Logs:** `journalctl -u eurodns-resolver -u smartdns-backend -f`; nginx access log for the
+  SNI proxy at `/var/log/nginx/stream-access.log`.
+* **Resolver owns public :53 AND :853 (native DoT, ALPN=dot); dnsmasq is a loopback forwarder on `127.0.0.1:5353`.**
 * **Certificate renewal:** handled by `certbot`'s systemd timer; the deploy hook
-  (`/etc/letsencrypt/renewal-hooks/deploy/00-eurodns.sh`) reloads nginx + DoT.
+  (`/etc/letsencrypt/renewal-hooks/deploy/00-eurodns.sh`) reloads nginx + eurodns-resolver.
 * **Config lives on the server** under `/opt/smartdns` (env), `/etc/nginx`, `/etc/dnsmasq.d`,
-  `/etc/stunnel`; the website under `/var/www/smartdns`.
+  `/etc/letsencrypt`; the website under `/var/www/smartdns`.
 
 ### Uninstall
 ```bash
 sudo ./uninstall.sh              # removes services + configs + cert + /opt|/var/www dirs
 ```
-Flags: `--yes` (no prompt), `--purge-packages` (also apt-purge nginx/dnsmasq/stunnel/certbot —
+Flags: `--yes` (no prompt), `--purge-packages` (also apt-purge nginx/dnsmasq/certbot —
 only if nothing else on the box uses them), `--keep-cert`, `--keep-data`. It stops and disables
-`smartdns-backend` and `eurodns-dot`, deletes the nginx site/stream include (and the managed
-line from `nginx.conf`, restoring the stock default site), removes the dnsmasq geo config and
-stunnel conf, deletes the certbot deploy hook and (optionally) the certificate.
+`eurodns-resolver`, `smartdns-backend` (and any legacy `eurodns-dot`/`stunnel-dot`), deletes the
+nginx site/stream include (and the managed line from `nginx.conf`, restoring the stock default
+site), removes the dnsmasq forwarder config, deletes the certbot deploy hook and (optionally)
+the certificate.
 
 ### Coexisting with an existing SNI fronting
 `deploy.sh` writes a **standalone** `stream{}` include set
