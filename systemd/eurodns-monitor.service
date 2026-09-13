@@ -1,0 +1,15 @@
+[Unit]
+Description=EuroDNS DoT monitor + self-heal loop (watches Private-DNS sessions, auto-fixes)
+After=network-online.target eurodns-resolver.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/smartdns/monitor.py
+Restart=always
+RestartSec=2
+Environment=REMEDIATE=1
+# optional: PHONE_IP= restrict to one client
+
+[Install]
+WantedBy=multi-user.target

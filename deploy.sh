@@ -71,6 +71,15 @@ if [ -z "$MGMT_HOST" ]; then
   warn "For a branded, stable name set up a real domain and re-run with: --host dns.example.com"
 fi
 echo "  Management host: $MGMT_HOST"
+# If this is the auto sslip.io (dash-encoded IPv4) host, ALSO cover the dot-spelled
+# form (smartdns.<ip-with-dots>.sslip.io). sslip.io resolves BOTH spellings to the
+# same IP, and Android validates the DoT cert hostname EXACTLY — so the cert must
+# match whichever spelling the user types, or Private DNS fails with "Couldn't connect".
+if [ "$MGMT_HOST" = "smartdns.$(echo "$IPV4" | tr '.' '-').sslip.io" ]; then
+  MGMT_ALT="smartdns.${IPV4}.sslip.io"
+else
+  MGMT_ALT=""
+fi
 
 # ---------------------------------------------------------------------------
 # 2. Install packages
@@ -173,7 +182,7 @@ render(){ # in out  KEY=VAL ...
 L6_LISTEN=""
 if [ -n "$IPV6" ]; then L6_LISTEN="    listen [::]:443;"; fi
 
-render "$SCRIPT_DIR/conf/stream-map.conf"    /etc/nginx/stream-enabled/10-eurodns-map.conf    "MGMT_HOST=$MGMT_HOST"
+render "$SCRIPT_DIR/conf/stream-map.conf"    /etc/nginx/stream-enabled/10-eurodns-map.conf    "MGMT_HOST=$MGMT_HOST" "MGMT_ALT_LINE=$([ -n "$MGMT_ALT" ] && echo "    $MGMT_ALT    127.0.0.1:8448;")"
 render "$SCRIPT_DIR/conf/stream-server.conf" /etc/nginx/stream-enabled/20-eurodns-server.conf "LISTEN6=$L6_LISTEN"
 
 LISTEN_ADDRESSES="127.0.0.1,$IPV4"
@@ -183,7 +192,7 @@ render "$SCRIPT_DIR/conf/dnsmasq.conf" /etc/dnsmasq.conf "LISTEN_ADDRESSES=$LIST
 L6_80=""
 [ -n "$IPV6" ] && L6_80="    listen [::]:80;"
 render "$SCRIPT_DIR/conf/site-http.conf" /etc/nginx/sites-available/eurodns.conf \
-  "MGMT_HOST=$MGMT_HOST" "LISTEN6_80=$L6_80"
+  "MGMT_HOST=$MGMT_HOST" "MGMT_ALT=$MGMT_ALT" "LISTEN6_80=$L6_80"
 
 # make sure there is exactly one top-level `stream { include ... }`
 if ! grep -q 'eurodns-stream.conf' /etc/nginx/nginx.conf; then
@@ -230,6 +239,7 @@ systemctl reload nginx 2>/dev/null || systemctl restart nginx
 CERT_DIR="/etc/letsencrypt/live/$MGMT_HOST"
 if [ ! -e "$CERT_DIR/fullchain.pem" ]; then
   CB_ARGS=(--webroot -w /var/www/smartdns -d "$MGMT_HOST" --non-interactive --agree-tos)
+  [ -n "$MGMT_ALT" ] && CB_ARGS+=(-d "$MGMT_ALT")
   if [ -n "$EMAIL" ]; then CB_ARGS+=(-m "$EMAIL"); else CB_ARGS+=(--register-unsafely-without-email); fi
   certbot certonly "${CB_ARGS[@]}" --keep-until-expiring || warn "certbot failed — check that A record for $MGMT_HOST points to $IPV4 and :80 is reachable."
 else

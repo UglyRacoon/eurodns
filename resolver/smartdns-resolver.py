@@ -61,6 +61,9 @@ NEVER = {
     "connectivitycheck.gstatic.com", "connectivitycheck.android.com",
     "connectivitycheck.google.com",
     "clients2.google.com", "clients3.google.com", "clients4.google.com", "clients5.google.com",
+    # Android Private-DNS validation probes MUST resolve to the REAL answer, or the
+    # phone refuses the connection ("Couldn't connect"). Do not hijack them.
+    "metric.gstatic.com", "dnsotls-ds.metric.gstatic.com",
 }
 
 def is_mapped(name):
@@ -179,25 +182,27 @@ def forward(data):
     finally:
         s.close()
 
-def respond(data):
-    """Decide the answer bytes for a raw DNS query (shared by UDP and TCP)."""
+def respond(data, tag=""):
+    """Decide the answer bytes for a raw DNS query (shared by UDP, TCP and DoT).
+    `tag` (e.g. 'DoT 1.2.3.4') prefixes the log line so the monitor can group sessions."""
     info = parse_msg(data)
     if info is None:
-        logq("parse-fail -> fwd %d bytes" % len(data))
+        logq("%s parse-fail -> fwd %d bytes" % ((tag + " ") if tag else "", len(data)))
         return forward(data)
     mapped = is_mapped(info["name"])
     rrs = answer_for(info["qtype"]) if mapped else None
+    pre = (tag + " ") if tag else ""
     if mapped and rrs is not None:
-        logq("%s %s%s -> LOCAL(%d)" % (info["name"], QT.get(info["qtype"], info["qtype"]),
-                                       "/EDNS" if info["edns"] else "", len(rrs)))
+        logq("%s%s %s%s -> LOCAL(%d)" % (pre, info["name"], QT.get(info["qtype"], info["qtype"]),
+                                         "/EDNS" if info["edns"] else "", len(rrs)))
         return build_response(data, info, rrs)
-    logq("%s %s%s -> FORWARD" % (info["name"], QT.get(info["qtype"], info["qtype"]),
-                                 "/EDNS" if info["edns"] else ""))
+    logq("%s%s %s%s -> FORWARD" % (pre, info["name"], QT.get(info["qtype"], info["qtype"]),
+                                   "/EDNS" if info["edns"] else ""))
     return forward(data)
 
 def handle(data, addr, sock):
     try:
-        sock.sendto(respond(data), addr)
+        sock.sendto(respond(data, "UDP %s" % addr[0]), addr)
     except Exception as e:
         logq("udp handle err: %r" % e)
 
@@ -229,10 +234,11 @@ def tcp_loop(fam=socket.AF_INET, addr="0.0.0.0"):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((addr, PORT)); s.listen(128)
 
-    def serve(c):
+    def serve(c, peer):
         # Keep the connection open and serve multiple pipelined queries; closing
         # after one answer makes Android report "Couldn't connect".
         c.settimeout(60)
+        tag = "TCP %s" % (peer[0] if peer else "?")
         try:
             while True:
                 ln = c.recv(2)
@@ -247,7 +253,7 @@ def tcp_loop(fam=socket.AF_INET, addr="0.0.0.0"):
                     if not chunk:
                         return
                     data += chunk
-                r = respond(data)
+                r = respond(data, tag)
                 c.sendall(struct.pack(">H", len(r)) + r)
         except Exception as e:
             logq("tcp serve err: %r" % e)
@@ -257,8 +263,8 @@ def tcp_loop(fam=socket.AF_INET, addr="0.0.0.0"):
             except Exception:
                 pass
     while True:
-        c, _ = s.accept()
-        threading.Thread(target=serve, args=(c,), daemon=True).start()
+        c, peer = s.accept()
+        threading.Thread(target=serve, args=(c, peer), daemon=True).start()
 
 def dot_loop():
     """Native DNS-over-TLS on DOT_PORT with ALPN 'dot' (Android Private DNS requirement)."""
@@ -280,33 +286,50 @@ def dot_loop():
     logq("DoT listening on :%d (ALPN dot)" % DOT_PORT)
 
     def serve(c0, addr):
+        ip = addr[0]
         try:
             c = ctx.wrap_socket(c0, server_side=True)
         except Exception as e:
-            logq("DoT handshake fail %s: %r" % (addr[0], e))
+            logq("DoT handshake fail %s: %r" % (ip, e))
             try: c0.close()
             except Exception: pass
             return
         c.settimeout(60)
+        tag = "DoT %s" % ip
+        logq("DoT %s CONNECT alpn=%s" % (ip, c.selected_alpn_protocol()))
+        nq = 0
+        probe = None
+        first = None
         try:
             while True:
                 ln = c.recv(2)
                 if len(ln) < 2:
-                    return
+                    break
                 (n,) = struct.unpack(">H", ln)
                 if n == 0:
-                    return
+                    break
                 data = b""
                 while len(data) < n:
                     ch = c.recv(n - len(data))
                     if not ch:
-                        return
+                        break
                     data += ch
-                r = respond(data)
+                if len(data) < n:
+                    break
+                info = parse_msg(data)
+                if info and "dnsotls-ds.metric.gstatic.com" in info["name"]:
+                    probe = info["name"]
+                if first is None and info:
+                    first = info["name"]
+                r = respond(data, tag)
                 c.sendall(struct.pack(">H", len(r)) + r)
+                nq += 1
         except Exception as e:
-            logq("DoT serve err: %r" % e)
+            logq("DoT serve err %s: %r" % (ip, e))
         finally:
+            verdict = "REJECTED" if (probe is not None and nq <= 4) else "OK"
+            logq("DoT %s CLOSE queries=%d probe=%s first=%s verdict=%s"
+                 % (ip, nq, probe or "none", first or "?", verdict))
             try: c.close()
             except Exception:
                 pass

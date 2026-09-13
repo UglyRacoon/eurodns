@@ -207,6 +207,10 @@ What a client should point at EuroDNS (all three are now equivalent):
 
 * **Wi‑Fi / router static DNS = `147.45.114.74`** — most reliable; every app + browser honors it.
 * **Private DNS (DoT) = `smartdns.<host>`** — works in Chrome and Google apps too.
+  Both the dash and dot spellings of the auto sslip.io host are valid (the cert covers
+  `smartdns.<ip-dotted>.sslip.io` **and** `smartdns.<ip-dashed>.sslip.io`); Android validates
+  the hostname exactly, so if Private DNS says "Couldn't connect", double-check you typed the
+  same host the certificate was issued for (either spelling is fine on EuroDNS).
 * **Chrome secure-DNS DoH = `https://<host>/dns-query`** — for locked-down networks.
 
 Only if a *specific* long-used app misbehaves is a one-off "Clear host cache"

@@ -114,6 +114,7 @@ footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--mut);mar
 <div class="code"><span>smartdns.147-45-114-74.sslip.io</span><button class="copy" data-copy="smartdns.147-45-114-74.sslip.io">копировать</button></div>
 <div class="note"><b>Никаких доп. настроек не нужно.</b> Сервер отдаёт запись <code>HTTPS/SVCB</code> (<code>alpn=h2</code> + адрес нашего прокси), поэтому Chrome и приложения Google сами идут на EuroDNS по HTTP/2 — протоколы QUIC/HTTP3, ECH и старый кэш больше не мешают. Отключать QUIC, чистить кэш или ставить флаги не требуется.</div>
 <div class="note">Если провайдер блокирует порт 853, включите в Chrome безопасный DNS (DoH) → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>. Для мобильного интернета (не Wi-Fi) используйте именно этот способ 2 — он действует на весь трафик без root.</div>
+ <div class="note"><b>Сертификат покрывает обе формы имени</b> — и <code>smartdns.147-45-114-74.sslip.io</code> (через дефисы), и <code>smartdns.147.45.114.74.sslip.io</code> (через точки). Android сверяет имя хоста DoT с сертификатом в точности: если пишет «Не удалось подключиться», убедитесь, что вбито то же имя, под которое выпущен сертификат (любая из двух форм подойдёт).</div>
 
 <h2 id="ios">📱 iPhone / iPad (iOS 14+)</h2>
 <div class="card">
