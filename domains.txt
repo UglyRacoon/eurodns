@@ -14,6 +14,8 @@ recaptcha.net
 youtube.com
 youtu.be
 ytimg.com
+google.ru
+google.dev
 openai.com
 chatgpt.com
 claude.ai

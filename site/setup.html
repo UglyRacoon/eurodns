@@ -23,6 +23,7 @@ h1{font-size:34px;margin:40px 0 6px}h2{font-size:22px;margin:34px 0 10px;border-
 ol{padding-left:22px}ol li{margin:8px 0}
 .note{border-left:3px solid var(--warn);background:#1b1710;padding:12px 16px;border-radius:8px;color:#e7d9b8;margin:14px 0}
 .ok{border-left:3px solid var(--ok);background:#0f1a13;padding:12px 16px;border-radius:8px;color:#c6efd5;margin:14px 0}
+.bad{border-left:3px solid #ff5c5c;background:#1f1212;padding:12px 16px;border-radius:8px;color:#f3c9c9;margin:14px 0}
 .toc{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
 .toc a{padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--mut);font-size:14px}
 code.k{font-family:var(--mono);background:#0e1524;border:1px solid var(--line);padding:1px 6px;border-radius:6px;color:#cfe0ff}
@@ -54,11 +55,13 @@ footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--mut);mar
 <div class="card" style="border-color:#4a3a10;background:#1b1710">
 <b>❗ Если на телефоне всё равно пишет «not supported in your country»</b>
 <ol>
-  <li>Откройте <a href="/test/">страницу проверки</a> именно на этом устройстве. Если она показывает <b>Россию</b> — значит, запросы устройства <b>не идут через EuroDNS</b> (DNS не применился). Настройте заново по инструкции ниже.</li>
-  <li><b>Chrome на Android часто игнорирует системный «Частный DNS»</b> и использует свой безопасный DNS. Поэтому для браузера надёжнее прописать наш DoH прямо в Chrome: Настройки → Конфиденциальность → Безопасность → Безопасный DNS → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</li>
-  <li>Некоторые сети блокируют порт <b>853 (DoT)</b>, тогда Private DNS молча не работает — DoH (п.2) сработает, т.к. идёт по 443.</li>
-  <li>Для игр и приложений (не браузер) используйте DNS на <b>роутере</b> (IP <code class="k">147.45.114.74</code>) — это покрывает весь трафик устройства.</li>
-  <li>Убедитесь, что устройство не «течёт» по IPv6 мимо нас: на роутере отключите IPv6 либо пропишите IPv6 <code class="k">2a0d:6c2:17:51b::</code>.</li>
+  <li>Откройте <a href="/test/">страницу проверки</a> именно в том браузере, где не открывается Gemini. Если она показывает <b>Россию</b> — браузер <b>не использует EuroDNS</b>. Это главная причина: смена «Частного DNS» в настройках Android <b>не применяется к Chrome и приложениям Google</b> — они резолвят сами.</li>
+  <li><b>Самый надёжный способ на телефоне</b> — прописать DNS <code class="k">147.45.114.74</code> не как «Частный DNS», а как <b>DNS-сервер в сети Wi-Fi</b> (долгое нажатие на сеть → Изменить → Показано доп. → Параметры IP → Статический → DNS 1 = <code class="k">147.45.114.74</code>), либо на <b>роутере</b>. Тогда его используют все приложения и браузер.</li>
+  <li><b>Отдельно в браузере</b>: Chrome → Настройки → Конфиденциальность и безопасность → Безопасность → «Использовать безопасный DNS» → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</li>
+  <li><b>Выключите QUIC/HTTP/3 в Chrome</b> (иначе Google-запросы идут по UDP мимо TCP-прокси): откройте <code class="k">chrome://flags/#enable-quic</code> → <b>Disabled</b> → перезапуск Chrome.</li>
+  <li><b>Сбросьте кэш Chrome</b> (в нём законсервированы реальные IP Google и ECH/Alt-Svc): <code class="k">chrome://net-internals/#dns</code> → «Clear host cache», и <code class="k">chrome://net-internals/#sockets</code> → «Flush socket pools», затем закрыть и открыть Chrome заново.</li>
+  <li>iOS: установите профиль <a href="/ios/eurodns.mobileconfig">eurodns.mobileconfig</a> (DoH) — он применяется ко всем приложениям; либо DNS <code class="k">147.45.114.74</code> в настройках Wi-Fi.</li>
+  <li>Некоторые сети блокируют <b>853 (DoT)</b> — тогда DoH (п.3) работает, т.к. идёт по 443. Порт <b>UDP 443</b> на сервере может быть занят другим сервисом — из-за этого и нужно отключать QUIC (п.4).</li>
 </ol>
 </div>
 
@@ -104,14 +107,19 @@ footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--mut);mar
 </ol></div>
 
 <h2 id="android">📱 Android 9+</h2>
-<div class="card"><p>Проще всего — <b>Private DNS</b> (шифрованный DoT):</p><ol>
-  <li><b>Настройки → Подключения / Сеть и Интернет → Другое / Дополнительно → Частный DNS-сервер</b> (встречается как «Private DNS»).</li>
-  <li>Выберите <b>«Имя хоста поставщика частного DNS-сервера»</b>.</li>
-  <li>Введите и сохраните:</li>
+<div class="card"><p><b>Способ 1 — DNS в Wi-Fi (надёжнее всего, используют все приложения и Chrome):</b></p><ol>
+  <li>Удерживайте подключённую сеть Wi-Fi → <b>«Изменить сеть»</b> → <b>«Дополнительно»</b> → <b>Настройки IP: «Статический»</b>.</li>
+  <li><b>DNS 1:</b> <code class="k">147.45.114.74</code> · <b>DNS 2:</b> <code class="k">2a0d:6c2:17:51b::</code> (или только IPv4). Сохранить.</li>
 </ol>
+<p style="margin-top:.6em"><b>Способ 2 — Private DNS (шифрованный DoT):</b> Настройки → Сеть и Интернет → Дополнительно → <b>Частный DNS</b> → «Имя хоста поставщика»:</p>
 <div class="code"><span>smartdns.147-45-114-74.sslip.io</span><button class="copy" data-copy="smartdns.147-45-114-74.sslip.io">копировать</button></div>
-<p>Или обычный DNS по Wi-Fi: удерживайте сеть → «Изменить сеть» → «Дополнительно» → Настройки IP: «Статический» → DNS 1: <code class="k">147.45.114.74</code>.</p>
-<div class="note">Private DNS действует для всех сетей и мобильного трафика. Для мобильного интернета это самый надёжный способ на Android.</div></div>
+<div class="bad"><b>Важно:</b> Chrome и приложения Google <b>игнорируют</b> системный Private DNS и резолвят по-своему. Поэтому для браузера дополнительно сделайте:</div>
+<ol>
+  <li><b>Безопасный DNS в Chrome:</b> Настройки → Конфиденциальность и безопасность → Безопасность → «Использовать безопасный DNS» → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</li>
+  <li><b>Выключите QUIC:</b> <code class="k">chrome://flags/#enable-quic</code> → <b>Disabled</b> → перезапуск (иначе часть Google-запросов идёт по UDP мимо прокси).</li>
+  <li><b>Сбросьте кэш Chrome:</b> <code class="k">chrome://net-internals/#dns</code> → Clear host cache, и <code class="k">chrome://net-internals/#sockets</code> → Flush socket pools.</li>
+</ol>
+<div class="note">Для мобильного интернета (не Wi-Fi) способ 1 недоступен без root — используйте роутер или Chrome-DoH (пункты выше). Полный разбор «почему с телефона не работает, а с сервера да» — в README/FAQ.</div></div>
 
 <h2 id="ios">📱 iPhone / iPad (iOS 14+)</h2>
 <div class="card">
