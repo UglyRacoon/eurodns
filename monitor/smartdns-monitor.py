@@ -27,7 +27,7 @@ NEVER_FILE = "/opt/smartdns/never-probe.fix"   # marker used by the probe-hijack
 
 CONNECT  = re.compile(r"DoT (\S+) CONNECT alpn=(\S+)")
 QRY      = re.compile(r"DoT (\S+) (\S+) (A|AAAA|HTTPS|PTR|TXT|SVCB)\S* -> (\S+)")
-CLOSE    = re.compile(r"DoT (\S+) CLOSE queries=(\d+) probe=(\S+) first=(\S+) verdict=(\S+)")
+CLOSE    = re.compile(r"DoT (\S+) CLOSE queries=(\d+) probe=(\S+).*?first=(\S+) verdict=(\S+)")
 HSFAIL   = re.compile(r"DoT handshake fail (\S+): (.*)")
 
 last_action = {}
@@ -125,7 +125,7 @@ def main():
         if m:
             ip, alpn = m.group(1), m.group(2)
             sessions[ip] = {"alpn": alpn, "nq": 0, "probe": "none", "first": "?",
-                            "proxied_probe": False, "gprox": 0}
+                            "proxied_probe": False, "gprox": 0, "announced": False}
             emit("DoT %s connected (alpn=%s)" % (ip, alpn))
             set_status("DoT connecting %s alpn=%s" % (ip, alpn))
             continue
@@ -144,6 +144,16 @@ def main():
                         fix_probe_hijack()
                 if act.startswith("LOCAL") and is_google_name(name):
                     s["gprox"] = s.get("gprox", 0) + 1
+                # Announce success the MOMENT the session is clearly the phone
+                # relying on us (Android validates via the probe; or Google app
+                # traffic is being proxied). Android keeps one DoT connection open
+                # a long time, so waiting for CLOSE to report HEALTHY lags badly.
+                if not s.get("announced") and (s["probe"] != "none" or s["gprox"] > 0):
+                    s["announced"] = True
+                    why = "validation probe answered" if s["probe"] != "none" else "Google traffic proxied"
+                    emit("MONITOR ANDROID-PRIVATE-DNS %s LIVE-OK (%s; alpn=%s, queries=%d)"
+                         % (ip, why, s.get("alpn", "?"), s["nq"]))
+                    set_status("PrivateDNS HEALTHY (live) last=%s %s" % (ip, why))
             continue
         if (m := HSFAIL.search(line)):
             # Do NOT auto-restart on a single handshake failure: that is usually a

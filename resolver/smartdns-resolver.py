@@ -300,6 +300,8 @@ def dot_loop():
         nq = 0
         probe = None
         first = None
+        probe_seen = False
+        after_probe = 0
         try:
             while True:
                 ln = c.recv(2)
@@ -317,19 +319,28 @@ def dot_loop():
                 if len(data) < n:
                     break
                 info = parse_msg(data)
-                if info and "dnsotls-ds.metric.gstatic.com" in info["name"]:
-                    probe = info["name"]
+                name = info["name"] if info else ""
+                if "dnsotls-ds.metric.gstatic.com" in name:
+                    probe = name
+                    if not probe_seen:
+                        probe_seen = True
+                else:
+                    if probe_seen:
+                        after_probe += 1   # real app query after validation => success
                 if first is None and info:
-                    first = info["name"]
+                    first = name
                 r = respond(data, tag)
                 c.sendall(struct.pack(">H", len(r)) + r)
                 nq += 1
         except Exception as e:
             logq("DoT serve err %s: %r" % (ip, e))
         finally:
-            verdict = "REJECTED" if (probe is not None and nq <= 4) else "OK"
-            logq("DoT %s CLOSE queries=%d probe=%s first=%s verdict=%s"
-                 % (ip, nq, probe or "none", first or "?", verdict))
+            # Android keeps ONE socket: it validates (random dnsotls-ds probes), and only
+            # if validation SUCCEEDS does it send app queries on that same socket. So a
+            # session that sent the probe but NO subsequent query is a failed validation.
+            verdict = "REJECTED" if (probe_seen and after_probe == 0) else "OK"
+            logq("DoT %s CLOSE queries=%d probe=%s after_probe=%d first=%s verdict=%s"
+                 % (ip, nq, probe or "none", after_probe, first or "?", verdict))
             try: c.close()
             except Exception:
                 pass
