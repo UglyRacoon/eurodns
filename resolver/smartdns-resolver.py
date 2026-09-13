@@ -134,14 +134,16 @@ def parse_msg(msg):
             "rd": bool(flags & 0x0100), "edns": edns, "bufsize": bufsize, "do": do}
 
 def svcb_rdata():
-    rd = struct.pack(">H", 1) + b"\x00"        # priority 1, SvcDomainName = '.'
+    # SVCB/HTTPS RDATA: Priority (2) + TargetName ("." = ".") + SvcParams.
+    # SvcParam keys: 1=mandatory 2=alpn 3=no-default-alpn 4=port 5=ipv4hint 6=ipv6hint.
+    rd = struct.pack(">H", 1) + b"\x00"        # priority 1, SvcDomainName = root
     def pv(k, v):
         return struct.pack(">HH", k, len(v)) + v
-    params = [pv(1, bytes([2]) + b"h2")]        # alpn=h2
+    params = [pv(2, bytes([2]) + b"h2")]        # alpn=h2  (force HTTP/2, no QUIC)
     if IPV4:
-        params.append(pv(3, socket.inet_aton(IPV4)))
+        params.append(pv(5, socket.inet_aton(IPV4)))      # ipv4hint = proxy IP
     if IPV6:
-        params.append(pv(4, socket.inet_pton(socket.AF_INET6, IPV6)))
+        params.append(pv(6, socket.inet_pton(socket.AF_INET6, IPV6)))  # ipv6hint = proxy IP
     return rd + b"".join(params)
 
 def answer_for(qtype):
