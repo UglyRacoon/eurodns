@@ -86,19 +86,33 @@ def fix_probe_hijack():
     subprocess.call(["sed", "-i", "-E", "/metric\\.gstatic\\.com/d", "/opt/smartdns/domains.txt"])
     restart_resolver("probe_hijack")
 
-def score_close(ip, nq, probe, first, verdict, alpn):
+GOOGLE_HINTS = ("googleapis.com", "google.com", "youtube", "ytimg", "gemini",
+                "ggpht", "googleusercontent", "gvt")
+
+def is_google_name(name):
+    n = name.lower()
+    return any(h in n for h in GOOGLE_HINTS)
+
+def score_close(ip, nq, probe, first, verdict, alpn, is_pd):
     ok = (verdict == "OK")
-    tag = "PHONE" if (PHONE_IP and ip == PHONE_IP) else "client"
-    line = "DoT %s %s: queries=%d probe=%s first=%s alpn=%s -> %s" % (
-        tag, ip, nq, probe, first, alpn, "HEALTHY ✓" if ok else "REJECTED ✗")
+    probe_seen = (probe != "none")
+    # A session matters to us if it looks like the phone relying on our DNS for
+    # Google/unblocked apps: it negotiated ALPN 'dot', OR sent the Android
+    # dnsotls-ds validation probe, OR we proxied Google traffic for it. Anything
+    # else (rare non-google, non-dot, non-probe noise) is ignored for the headline.
+    line = "%s %s alpn=%s probe=%s queries=%d first=%s -> %s" % (
+        "ANDROID-PRIVATE-DNS" if is_pd else "other-DoT(ignore)",
+        ip, alpn, probe, nq, first, "HEALTHY ✓" if ok else "REJECTED ✗")
     history.append(line)
     del history[:-25]
     emit("MONITOR " + line)
-    set_status(("DoT OK" if ok else "DoT REJECTED") + " last=%s %s" % (ip, line.split("->",1)[1].strip()))
-    if not ok:
-        if alpn != "dot":
-            emit("  cause: ALPN was %r (expected 'dot')" % alpn)
-        restart_resolver("rejected")
+    if is_pd:
+        set_status(("PrivateDNS HEALTHY ✓" if ok else "PrivateDNS REJECTED ✗")
+                   + " last=%s alpn=%s probe=%s" % (ip, alpn, probe))
+        if not ok:
+            if alpn != "dot":
+                emit("  note: ALPN=%r (some Android/Vivo clients omit ALPN; ok if it connects)" % alpn)
+            restart_resolver("privatedns_rejected")
     return ok
 
 def main():
@@ -110,7 +124,8 @@ def main():
         m = CONNECT.search(line)
         if m:
             ip, alpn = m.group(1), m.group(2)
-            sessions[ip] = {"alpn": alpn, "nq": 0, "probe": "none", "first": "?", "proxied_probe": False}
+            sessions[ip] = {"alpn": alpn, "nq": 0, "probe": "none", "first": "?",
+                            "proxied_probe": False, "gprox": 0}
             emit("DoT %s connected (alpn=%s)" % (ip, alpn))
             set_status("DoT connecting %s alpn=%s" % (ip, alpn))
             continue
@@ -127,6 +142,8 @@ def main():
                     if act.startswith("LOCAL"):
                         s["proxied_probe"] = True
                         fix_probe_hijack()
+                if act.startswith("LOCAL") and is_google_name(name):
+                    s["gprox"] = s.get("gprox", 0) + 1
             continue
         if (m := HSFAIL.search(line)):
             # Do NOT auto-restart on a single handshake failure: that is usually a
@@ -140,7 +157,8 @@ def main():
             nq = int(nq)
             s = sessions.pop(ip, {}) or {}
             alpn = s.get("alpn", "?")
-            score_close(ip, nq, probe, first, verdict, alpn)
+            is_pd = (alpn == "dot") or (probe != "none") or (s.get("gprox", 0) > 0)
+            score_close(ip, nq, probe, first, verdict, alpn, is_pd)
             continue
     emit("journal stream ended; exiting")
 
