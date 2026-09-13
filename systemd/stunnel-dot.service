@@ -1,0 +1,13 @@
+[Unit]
+Description=EuroDNS DNS-over-TLS (DoT) endpoint via stunnel -> dnsmasq
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=forking
+ExecStart=/usr/bin/stunnel /etc/stunnel/eurodns-dot.conf
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

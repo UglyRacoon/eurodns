@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>PayloadType</key>
+            <string>com.apple.dns</string>
+            <key>PayloadIdentifier</key>
+            <string>io.eurodns.dns.payload</string>
+            <key>PayloadUUID</key>
+            <string>7a1f2c3d-9b4e-4a6f-8c1d-2e3f4a5b6c7d</string>
+            <key>PayloadDisplayName</key>
+            <string>EuroDNS</string>
+            <key>DNSOverHTTPS</key>
+            <dict>
+                <key>ServerURL</key>
+                <string>https://smartdns.147-45-114-74.sslip.io/dns-query</string>
+                <key>ProviderName</key>
+                <string>EuroDNS</string>
+            </dict>
+        </dict>
+    </array>
+    <key>PayloadDisplayName</key>
+    <string>EuroDNS</string>
+    <key>PayloadIdentifier</key>
+    <string>io.eurodns.profile</string>
+    <key>PayloadUUID</key>
+    <string>1a2b3c4d-5e6f-4a7b-8c9d-0e1f2a3b4c5d</string>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+    <key>PayloadOrganization</key>
+    <string>EuroDNS</string>
+</dict>
+</plist>

@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EuroDNS — доступ к Xbox Live, Gemini, ChatGPT и играм Supercell | Ошибка 0x80a40401</title>
+<meta name="description" content="EuroDNS — Smart DNS для восстановления доступа к гео-ограниченным сервисам: Xbox Live, Gemini, ChatGPT, Claude, Spotify, Twitch, Notion, игры Supercell. Без установки ПО и потери скорости.">
+<style>
+:root{
+  --bg:#0b0f19; --bg2:#111726; --card:#151d30; --line:#232e47;
+  --txt:#e7ecf5; --mut:#9fb0cc; --acc:#4f8cff; --acc2:#7c5cff; --ok:#2ecc71; --warn:#f5a623;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0%,var(--bg) 55%) fixed;color:var(--txt);
+  font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--acc);text-decoration:none} a:hover{text-decoration:underline}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);background:rgba(11,15,25,.72);border-bottom:1px solid var(--line)}
+nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;color:var(--txt)}
+.brand .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-size:14px}
+.links{display:flex;gap:22px;align-items:center;font-size:15px;color:var(--mut)}
+.links a{color:var(--mut)} .links a:hover{color:var(--txt);text-decoration:none}
+.btn{display:inline-block;padding:11px 18px;border-radius:12px;font-weight:700;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:0;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+.hero{padding:72px 0 40px;text-align:center}
+.hero h1{font-size:44px;line-height:1.15;margin:0 auto 18px;max-width:820px}
+.hero p{color:var(--mut);font-size:19px;max-width:720px;margin:0 auto 26px}
+code.k{font-family:var(--mono);background:#0e1524;border:1px solid var(--line);padding:2px 8px;border-radius:7px;color:#cfe0ff}
+.pills{display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:26px}
+.pill{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 20px;min-width:150px}
+.pill b{display:block;font-size:26px}
+.pill span{color:var(--mut);font-size:13px}
+section{padding:48px 0;border-top:1px solid var(--line)}
+h2{font-size:30px;margin:0 0 8px} .sub{color:var(--mut);margin:0 0 26px}
+.grid{display:grid;gap:18px}
+.g2{grid-template-columns:1fr 1fr} .g3{grid-template-columns:repeat(3,1fr)} .g4{grid-template-columns:repeat(2,1fr)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
+.card h3{margin:0 0 8px;font-size:19px} .card p{margin:0;color:var(--mut)}
+.tag{display:inline-block;font-size:12px;color:var(--acc);background:#12203c;border:1px solid #1e3661;border-radius:999px;padding:3px 10px;margin:4px 4px 0 0}
+.step{display:flex;gap:16px} .step .n{flex:0 0 44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-weight:800}
+.dnsbox{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dnsrow{display:flex;justify-content:space-between;align-items:center;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--mono)}
+.dnsrow small{color:var(--mut);font-family:system-ui}
+.copy{cursor:pointer;background:#12203c;border:1px solid #1e3661;color:var(--acc);border-radius:8px;padding:4px 10px;font-family:system-ui;font-size:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0}
+.tab{padding:9px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--mut);cursor:pointer;font-size:14px}
+.tab.active{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border-color:transparent}
+.panel{display:none} .panel.active{display:block}
+ol{padding-left:20px} ol li{margin:8px 0}
+.faq{border:1px solid var(--line);border-radius:12px;background:var(--card);margin:10px 0;overflow:hidden}
+.faq summary{cursor:pointer;padding:16px 18px;font-weight:600;list-style:none;display:flex;justify-content:space-between}
+.faq summary::-webkit-details-marker{display:none} .faq summary:after{content:"+";color:var(--acc);font-size:22px}
+.faq[open] summary:after{content:"–"} .faq .a{padding:0 18px 16px;color:var(--mut)}
+.note{border-left:3px solid var(--warn);background:#1b1710;padding:12px 16px;border-radius:8px;color:#e7d9b8;margin:14px 0}
+footer{border-top:1px solid var(--line);padding:36px 0 60px;color:var(--mut);font-size:14px}
+footer h4{color:var(--txt);font-size:15px;margin:0 0 10px}
+.status{display:inline-flex;align-items:center;gap:8px;font-size:13px;color:var(--ok)}
+.status i{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(46,204,113,.15)}
+@media(max-width:820px){.hero h1{font-size:32px}.g2,.g3,.g4,.dnsbox{grid-template-columns:1fr}.links{display:none}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><nav>
+  <div class="brand"><span class="dot">🌐</span> EuroDNS</div>
+  <div class="links">
+    <a href="#services">Сервисы</a>
+    <a href="/setup.html">Инструкция</a>
+    <a href="#setup">Настройка</a>
+    <a href="#faq">FAQ</a>
+    <a href="#support">Поддержка</a>
+    <a class="btn" href="https://smartdns.147-45-114-74.sslip.io/test/">Проверить</a>
+  </div>
+</nav></div></header>
+
+<div class="wrap">
+<section class="hero" id="top" style="border-top:0">
+  <h1>Стабильный доступ к сервисам без&nbsp;границ</h1>
+  <p>Столкнулись с ошибкой <code class="k">0x80a40401</code> и региональными ограничениями? EuroDNS — это Smart&nbsp;DNS, который восстанавливает корректную маршрутизацию и возвращает доступ к сервисам. Без установки ПО и без потери скорости.</p>
+  <div>
+    <a class="btn" href="#setup">Подключить за 2 минуты</a>
+    <a class="btn ghost" href="https://smartdns.147-45-114-74.sslip.io/test/">Проверить подключение</a>
+  </div>
+  <div class="pills">
+    <div class="pill"><b>30+</b><span>игр и сервисов</span></div>
+    <div class="pill"><b id="ping">— мс</b><span>ваш пинг до сервера</span></div>
+    <div class="pill"><b>24/7</b><span>мониторинг</span></div>
+  </div>
+  <p style="margin-top:18px"><span class="status"><i></i> <span id="svc-status">Сервис онлайн</span></span></p>
+</section>
+</div>
+
+<section id="services"><div class="wrap">
+  <h2>Что работает через EuroDNS</h2>
+  <p class="sub">Сервисы с региональными ограничениями. Мы восстанавливаем связность через оптимизацию маршрутизации — остальной трафик идёт напрямую.</p>
+  <div class="grid g2">
+    <div class="card"><h3>🎮 Xbox Live и игры</h3><p>Исправление ошибки входа <code class="k">0x80a40401</code>. Доступ к Destiny&nbsp;2, Marathon, Stumble Guys и играм Supercell (Brawl Stars, Clash of Clans и др.), облачному геймингу xCloud.</p>
+      <div><span class="tag">Xbox</span><span class="tag">PSN</span><span class="tag">Supercell</span><span class="tag">Riot</span><span class="tag">Epic</span></div></div>
+    <div class="card"><h3>🤖 Gemini, ChatGPT, Claude, AI</h3><p>Стабильный доступ к нейросетям без VPN. Быстро и напрямую — страницы больше не показывают «not supported in your country».</p>
+      <div><span class="tag">Gemini</span><span class="tag">ChatGPT</span><span class="tag">Claude</span><span class="tag">Copilot</span><span class="tag">Perplexity</span></div></div>
+    <div class="card"><h3>🛠 JetBrains, GitHub, Notion</h3><p>Ключевые инструменты: обновления и лицензии JetBrains, GitHub Copilot, проекты в Notion, Figma, Framer.</p>
+      <div><span class="tag">GitHub</span><span class="tag">JetBrains</span><span class="tag">Notion</span><span class="tag">Figma</span><span class="tag">Framer</span></div></div>
+    <div class="card"><h3>🎧 Twitch, Spotify, музыка</h3><p>Twitch-трансляции в максимальном качестве, Spotify без гео-фильтров, SoundCloud, Deezer, Tidal и Apple&nbsp;Music.</p>
+      <div><span class="tag">Twitch</span><span class="tag">Spotify</span><span class="tag">Deezer</span><span class="tag">Tidal</span></div></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Как это работает</h2>
+  <p class="sub">Три простых шага — и вы получаете доступ ко всем нужным ресурсам.</p>
+  <div class="grid g3">
+    <div class="card step"><div class="n">1</div><div><h3>Меняете DNS</h3><p>Указываете наш адрес в настройках устройства — консоли, ПК, телефона или роутера.</p></div></div>
+    <div class="card step"><div class="n">2</div><div><h3>Умная маршрутизация</h3><p>Smart DNS определяет запросы к гео-ограниченным платформам и направляет их через специализированный шлюз в ЕС.</p></div></div>
+    <div class="card step"><div class="n">3</div><div><h3>Всё работает</h3><p>Обычные сайты открываются напрямую, гео-ограниченные — через наш шлюз. Скорость не падает.</p></div></div>
+  </div>
+</div></section>
+
+<section><div class="wrap">
+  <h2>Почему выбирают EuroDNS</h2>
+  <p class="sub">Надёжный сервис без обязательной регистрации, который не замедляет интернет.</p>
+  <div class="grid g3">
+    <div class="card"><h3>⚡ Настройка за 2 минуты</h3><p>Без регистрации и приложений — просто укажите адрес DNS на любом устройстве.</p></div>
+    <div class="card"><h3>🚀 100% скорости провайдера</h3><p>Перенаправляются только гео-ограниченные запросы. Остальной трафик идёт напрямую.</p></div>
+    <div class="card"><h3>🎯 30+ игр и сервисов</h3><p>Xbox Live, Brawl Stars, ChatGPT, Gemini, Claude, Spotify, Twitch, Notion, JetBrains — сразу после подключения.</p></div>
+    <div class="card"><h3>📱 Любое устройство</h3><p>Xbox, PlayStation, ПК, Android, iOS — или настройте один раз на роутере для всей сети.</p></div>
+    <div class="card"><h3>🔒 Шифрование и Zero-Log</h3><p>DNS-over-HTTPS и DNS-over-TLS защищают от перехвата. Логи запросов не ведём.</p></div>
+    <div class="card"><h3>🛰 Стабильность 24/7</h3><p>Мониторинг в реальном времени и резервные шлюзы в Европе.</p></div>
+  </div>
+  <p style="margin-top:20px"><a class="btn ghost" href="/setup.html">Подробная инструкция по устройствам →</a></p>
+</div></section>
+
+<section id="setup"><div class="wrap">
+  <h2>Начните пользоваться за 2 минуты</h2>
+  <p class="sub">Выберите платформу и следуйте инструкции. Никаких установок и регистраций.</p>
+
+  <div class="card" style="margin-bottom:22px">
+    <h3>DNS-адреса для настройки</h3>
+    <p class="sub" style="margin:4px 0 14px">Стандартные адреса IPv4 / IPv6:</p>
+    <div class="dnsbox">
+      <div class="dnsrow"><span>147.45.114.74 <small>— основной (IPv4)</small></span><button class="copy" data-copy="147.45.114.74">копировать</button></div>
+      <div class="dnsrow"><span>2a0d:6c2:17:51b:: <small>— дополнительный (IPv6)</small></span><button class="copy" data-copy="2a0d:6c2:17:51b::">копировать</button></div>
+    </div>
+    <p class="sub" style="margin:16px 0 8px">Для шифрованного DNS (DoH/DoT):</p>
+    <div class="dnsbox">
+      <div class="dnsrow"><span>smartdns.147-45-114-74.sslip.io <small>— DoT / Private DNS</small></span><button class="copy" data-copy="smartdns.147-45-114-74.sslip.io">копировать</button></div>
+      <div class="dnsrow"><span>https://smartdns.147-45-114-74.sslip.io/dns-query <small>— DoH</small></span><button class="copy" data-copy="https://smartdns.147-45-114-74.sslip.io/dns-query">копировать</button></div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-t="xbox">Xbox</div>
+    <div class="tab" data-t="ps">PlayStation</div>
+    <div class="tab" data-t="pc">PC (Windows)</div>
+    <div class="tab" data-t="router">Роутер</div>
+    <div class="tab" data-t="android">Android</div>
+    <div class="tab" data-t="ios">iOS</div>
+    <div class="tab" data-t="browser">Браузер (DoH)</div>
+  </div>
+
+  <div class="panel active" data-p="xbox">
+    <h3>Настройка на Xbox</h3>
+    <ol>
+      <li>Нажмите кнопку <b>Xbox</b> на геймпаде, чтобы открыть гид.</li>
+      <li>Перейдите в <b>«Профиль и система» → «Параметры» → «Общие» → «Параметры сети»</b>.</li>
+      <li>Выберите <b>«Дополнительные параметры»</b>, затем <b>«Параметры DNS»</b>.</li>
+      <li>Выберите <b>«Вручную»</b> и введите: Основной <code class="k">147.45.114.74</code>, Дополнительный <code class="k">147.45.114.74</code>.</li>
+      <li>Сохраните и перезагрузите консоль.</li>
+    </ol>
+    <div class="note"><b>Важно про IPv6.</b> Если консоль получает IPv6-адрес, укажите наш IPv6 DNS <code class="k">2a0d:6c2:17:51b::</code> в настройках роутера или отключите IPv6 на роутере.</div>
+  </div>
+  <div class="panel" data-p="ps">
+    <h3>Настройка на PlayStation 4 / 5</h3>
+    <ol>
+      <li>«Настройки» → «Сеть» → «Установить соединение с Интернетом».</li>
+      <li>Выберите Wi-Fi/LAN → «Дополнительные настройки».</li>
+      <li>В разделе «Настройки DNS» выберите <b>«Вручную»</b>.</li>
+      <li>Основной DNS: <code class="k">147.45.114.74</code>, Дополнительный: <code class="k">147.45.114.74</code>.</li>
+      <li>MTU и прокси оставьте как есть, сохраните и проверьте соединение.</li>
+    </ol>
+    <div class="note"><b>Важно про IPv6.</b> Укажите наш IPv6 DNS в настройках роутера или отключите IPv6.</div>
+  </div>
+  <div class="panel" data-p="pc">
+    <h3>Настройка на ПК (Windows 10/11)</h3>
+    <p><b>Рекомендуемый способ для Windows 11 (DoH):</b></p>
+    <ol>
+      <li>«Параметры» → «Сеть и Интернет» → «Wi-Fi/Ethernet» → «Свойства оборудования».</li>
+      <li>«Назначение DNS-сервера» → «Изменить» → «Вручную», включите IPv4.</li>
+      <li>Введите <code class="k">147.45.114.74</code>. В пункте «Предпочтительное шифрование DNS» выберите <b>«Только шифрование (через HTTPS)»</b> и укажите <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</li>
+    </ol>
+    <p><b>Стандартный способ (Windows 10 и старше):</b></p>
+    <ol>
+      <li>«Панель управления» → «Центр управления сетями» → ваше подключение → «Свойства».</li>
+      <li>«IP версии 4 (TCP/IPv4)» → «Свойства» → «Использовать следующие адреса DNS» → <code class="k">147.45.114.74</code>.</li>
+    </ol>
+  </div>
+  <div class="panel" data-p="router">
+    <h3>Настройка на роутере</h3>
+    <p>Один раз настроив DNS на роутере, через EuroDNS будут работать все устройства в сети. Обычно это раздел <b>WAN / LAN → DNS-серверы</b>: пропишите <code class="k">147.45.114.74</code> (и IPv6 <code class="k">2a0d:6c2:17:51b::</code>) и отключите IPv6, если он мешает.</p>
+    <p>Поддерживаемые прошивки: Keenetic, TP-Link, ASUS, D-Link, MikroTik, Xiaomi, Huawei, ZTE, SNR, Tenda, Mercusys, OpenWRT и другие.</p>
+    <div class="note">Инструкция именно для вашей модели доступна в <a href="#support">Telegram-поддержке</a>.</div>
+  </div>
+  <div class="panel" data-p="android">
+    <h3>Настройка на Android (9+)</h3>
+    <ol>
+      <li>«Настройки» → «Сеть и Интернет» → «Частный DNS-сервер».</li>
+      <li>Выберите «Имя хоста поставщика частного DNS-сервера».</li>
+      <li>Введите <code class="k">smartdns.147-45-114-74.sslip.io</code> и сохраните.</li>
+    </ol>
+  </div>
+  <div class="panel" data-p="ios">
+    <h3>Настройка на iOS (14+)</h3>
+    <p>Простой способ — профиль конфигурации, который автоматически настроит шифрованный DNS (DoH).</p>
+    <ol>
+      <li><b>Откройте эту страницу в Safari.</b></li>
+      <li>Нажмите на ссылку для загрузки профиля: <a href="/ios/eurodns.mobileconfig">eurodns.mobileconfig</a></li>
+      <li>Разрешите загрузку, откройте «Настройки» → «Профиль загружен» → «Установить».</li>
+    </ol>
+  </div>
+  <div class="panel" data-p="browser">
+    <h3>Настройка в браузере (DNS-over-HTTPS)</h3>
+    <p><b>Chrome / Edge / Opera / Яндекс.</b> Настройки → Безопасность → «Использовать безопасный DNS-сервер» → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</p>
+    <p><b>Firefox.</b> Настройки → Приватность → «DNS через HTTPS» → «Максимальная защита» → «По выбору» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</p>
+  </div>
+
+  <div style="margin-top:26px">
+    <a class="btn" href="https://smartdns.147-45-114-74.sslip.io/test/">Проверить подключение →</a>
+  </div>
+</div></section>
+
+<section id="faq"><div class="wrap">
+  <h2>Частые вопросы</h2>
+  <p class="sub">Отвечаем на важные вопросы о работе сервиса.</p>
+  <details class="faq"><summary>Это легально?</summary><div class="a">Да. Сервис не нарушает законы РФ и восстанавливает доступ к ресурсам, искусственно ограниченным по географическому признаку зарубежными корпорациями. Мы не предоставляем доступ к сайтам из реестра Роскомнадзора.</div></details>
+  <details class="faq"><summary>Могут ли забанить аккаунт консоли?</summary><div class="a">EuroDNS не использует читы и не модифицирует ПО — меняется только сетевой маршрут. Однако любые инструменты обхода региональных ограничений используются на ваш страх и риск по правилам самих платформ.</div></details>
+  <details class="faq"><summary>Храните ли вы логи запросов?</summary><div class="a">Нет. Мы не являемся оператором связи. Регистрация не требуется, журналирование трафика не ведётся — запросы обрабатываются в оперативной памяти.</div></details>
+  <details class="faq"><summary>Снизит ли DNS пинг в играх?</summary><div class="a">DNS не может физически сократить расстояние до игрового сервера. Скорость и пинг останутся на уровне вашего провайдера; сервис лишь восстанавливает корректную маршрутизацию.</div></details>
+  <details class="faq"><summary>Что делать, если не работает?</summary><div class="a">1) Проверьте настройки на <a href="https://smartdns.147-45-114-74.sslip.io/test/">тест-стенде</a>. 2) Исключите утечку IPv6 — пропишите наш IPv6 на роутере или отключите IPv6. 3) Не помогло — напишите в <a href="#support">поддержку</a>.</div></details>
+</div></section>
+
+<section id="support"><div class="wrap">
+  <h2>Остались вопросы?</h2>
+  <p class="sub">Мы на связи. Настройка сети может вызывать сложности — поможем.</p>
+  <div class="grid g2">
+    <div class="card"><h3>Проблемы с подключением?</h3><p>Если доступ не появился или обнаружена утечка IPv6 — наша поддержка поможет.</p><p style="margin-top:12px"><a class="btn ghost" href="https://t.me/eurodns_support">Написать в техподдержку →</a></p></div>
+    <div class="card"><h3>Нужен новый сервис?</h3><p>Не нашли нужную игру или приложение? Сообщите — добавим поддержку.</p><p style="margin-top:12px"><a class="btn ghost" href="https://t.me/eurodns_support">Предложить сервис →</a></p></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="grid g3">
+    <div><div class="brand" style="margin-bottom:8px"><span class="dot">🌐</span> EuroDNS</div>
+      <p>EuroDNS — инфраструктура для восстановления доступа к мировым сервисам и преодоления гео-блокировок.</p></div>
+    <div><h4>Навигация</h4><p><a href="#setup">Настройка</a><br><a href="#faq">Частые вопросы</a><br><a href="#support">Поддержка</a></p></div>
+    <div><h4>Документы</h4><p><a href="/setup.html">Инструкция по подключению</a><br><a href="/terms.html">Пользовательское соглашение</a><br><a href="/privacy.html">Политика конфиденциальности</a></p></div>
+  </div>
+  <p style="margin-top:26px;color:#6b7a99">EuroDNS — независимый технический инструмент (Smart DNS), предоставляется «как есть». Не является аффилированным с Microsoft, Supercell, OpenAI, Google и иными лицами; товарные знаки используются в информационных целях. © 2025–2026 EuroDNS.</p>
+</div></footer>
+
+<script>
+// copy buttons
+document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.copy);const t=b.textContent;b.textContent='✓ скопировано';setTimeout(()=>b.textContent=t,1400)}));
+// tabs
+document.querySelectorAll('#tabs .tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.querySelector('.panel[data-p="'+t.dataset.t+'"]').classList.add('active');
+}));
+// ping
+try{const t0=performance.now();fetch('https://smartdns.147-45-114-74.sslip.io/api/selftest?ping=1',{method:'GET',mode:'no-cors',cache:'no-store'}).finally(()=>{
+  const r=fetch('/favicon.ico',{cache:'no-store'});});}catch(e){}
+(async()=>{try{const t0=Date.now();await fetch('https://smartdns.147-45-114-74.sslip.io/',{mode:'no-cors',cache:'no-store'});const dt=Math.max(1,Math.round(Date.now()-t0));document.getElementById('ping').textContent=dt+' мс';}catch(e){}})();
+// live service status
+(async()=>{try{const r=await fetch('/api/selftest',{cache:'no-store'});const j=await r.json();const el=document.getElementById('svc-status');if(j.all_unblocked){el.textContent='Все сервисы доступны';}else{el.textContent='Сервис онлайн';}}catch(e){}})();
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+*.log
+.env
+deploy.local.sh

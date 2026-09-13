@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Инструкция по подключению — EuroDNS</title>
+<meta name="description" content="Пошаговая инструкция настройки EuroDNS для Xbox, PlayStation, Windows, macOS, роутера, Android, iOS и браузера (DoH/DoT).">
+<style>
+:root{--bg:#0b0f19;--bg2:#111726;--card:#151d30;--line:#232e47;--txt:#e7ecf5;--mut:#9fb0cc;--acc:#4f8cff;--acc2:#7c5cff;--ok:#2ecc71;--warn:#f5a623;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:radial-gradient(1200px 600px at 80% -10%,#16233f 0%,var(--bg) 55%) fixed;color:var(--txt);font:16px/1.65 system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+a{color:var(--acc);text-decoration:none}a:hover{text-decoration:underline}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+header{position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);background:rgba(11,15,25,.72);border-bottom:1px solid var(--line)}
+nav{display:flex;align-items:center;justify-content:space-between;height:64px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:20px;color:var(--txt)}
+.brand .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--acc),var(--acc2));display:grid;place-items:center;font-size:14px}
+.btn{display:inline-block;padding:10px 16px;border-radius:12px;font-weight:700;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff;border:0;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--txt)}
+h1{font-size:34px;margin:40px 0 6px}h2{font-size:22px;margin:34px 0 10px;border-top:1px solid var(--line);padding-top:22px}
+.sub{color:var(--mut)}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;margin:14px 0}
+.code{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-family:var(--mono);word-break:break-all;margin:8px 0}
+.copy{cursor:pointer;background:#12203c;border:1px solid #1e3661;color:var(--acc);border-radius:8px;padding:4px 10px;font-family:system-ui;font-size:12px;white-space:nowrap}
+ol{padding-left:22px}ol li{margin:8px 0}
+.note{border-left:3px solid var(--warn);background:#1b1710;padding:12px 16px;border-radius:8px;color:#e7d9b8;margin:14px 0}
+.ok{border-left:3px solid var(--ok);background:#0f1a13;padding:12px 16px;border-radius:8px;color:#c6efd5;margin:14px 0}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+.toc a{padding:7px 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg2);color:var(--mut);font-size:14px}
+code.k{font-family:var(--mono);background:#0e1524;border:1px solid var(--line);padding:1px 6px;border-radius:6px;color:#cfe0ff}
+footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--mut);margin-top:40px}
+</style>
+</head>
+<body>
+<header><div class="wrap"><nav>
+  <a class="brand" href="/"><span class="dot">🌐</span> EuroDNS</a>
+  <div class="links"><a class="btn ghost" href="/test/">Проверить подключение</a></div>
+</nav></div></header>
+
+<div class="wrap">
+<h1>Инструкция по подключению</h1>
+<p class="sub">Выберите своё устройство. Быстрее всего — прописать DNS-сервер <code class="k">147.45.114.74</code>. Для шифрования используйте DoH/DoT (адреса ниже).</p>
+
+<div class="card">
+  <b>Основные адреса сервиса</b>
+  <div class="code"><span>DNS IPv4: 147.45.114.74</span><button class="copy" data-copy="147.45.114.74">копировать</button></div>
+  <div class="code"><span>DNS IPv6: 2a0d:6c2:17:51b::</span><button class="copy" data-copy="2a0d:6c2:17:51b::">копировать</button></div>
+  <div class="code"><span>DoT / Private DNS: smartdns.147-45-114-74.sslip.io</span><button class="copy" data-copy="smartdns.147-45-114-74.sslip.io">копировать</button></div>
+  <div class="code"><span>DoH URL: https://smartdns.147-45-114-74.sslip.io/dns-query</span><button class="copy" data-copy="https://smartdns.147-45-114-74.sslip.io/dns-query">копировать</button></div>
+</div>
+
+<div class="toc">
+  <a href="#xbox">Xbox</a><a href="#ps">PlayStation</a><a href="#win">Windows</a><a href="#mac">macOS</a><a href="#android">Android</a><a href="#ios">iPhone/iPad</a><a href="#router">Роутер</a><a href="#browser">Браузер</a><a href="#tv">Smart TV</a>
+</div>
+
+<div class="card" style="border-color:#4a3a10;background:#1b1710">
+<b>❗ Если на телефоне всё равно пишет «not supported in your country»</b>
+<ol>
+  <li>Откройте <a href="/test/">страницу проверки</a> именно на этом устройстве. Если она показывает <b>Россию</b> — значит, запросы устройства <b>не идут через EuroDNS</b> (DNS не применился). Настройте заново по инструкции ниже.</li>
+  <li><b>Chrome на Android часто игнорирует системный «Частный DNS»</b> и использует свой безопасный DNS. Поэтому для браузера надёжнее прописать наш DoH прямо в Chrome: Настройки → Конфиденциальность → Безопасность → Безопасный DNS → «С другим поставщиком» → <code class="k">https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</li>
+  <li>Некоторые сети блокируют порт <b>853 (DoT)</b>, тогда Private DNS молча не работает — DoH (п.2) сработает, т.к. идёт по 443.</li>
+  <li>Для игр и приложений (не браузер) используйте DNS на <b>роутере</b> (IP <code class="k">147.45.114.74</code>) — это покрывает весь трафик устройства.</li>
+  <li>Убедитесь, что устройство не «течёт» по IPv6 мимо нас: на роутере отключите IPv6 либо пропишите IPv6 <code class="k">2a0d:6c2:17:51b::</code>.</li>
+</ol>
+</div>
+
+<h2 id="xbox">🎮 Xbox One / Series X|S</h2>
+<div class="card"><ol>
+  <li>Нажмите кнопку <b>Xbox</b> на геймпаде → <b>Профиль и система → Параметры → Общие → Параметры сети</b>.</li>
+  <li><b>Дополнительные параметры → Параметры DNS</b>.</li>
+  <li>Выберите <b>«Вручную»</b>:</li>
+  <ol type="A"><li>Основной DNS: <code class="k">147.45.114.74</code></li><li>Дополнительный DNS: <code class="k">147.45.114.74</code></li></ol>
+  <li>Сохраните и <b>перезагрузите консоль</b>. Проверка сети → тест подключения к сервисам Xbox Live.</li>
+</ol>
+<div class="note"><b>IPv6.</b> Если у консоли есть IPv6-адрес, либо пропишите наш IPv6 <code class="k">2a0d:6c2:17:51b::</code> в настройках роутера, либо отключите IPv6 на роутере — иначе часть запросов пойдёт мимо EuroDNS.</div></div>
+
+<h2 id="ps">🎮 PlayStation 4 / 5</h2>
+<div class="card"><ol>
+  <li><b>Настройки → Сеть → Настройки подключения → Установить соединение с Интернетом</b> (LAN или Wi-Fi).</li>
+  <li>Выберите <b>«Настройка вручную»</b> → «Дополнительные настройки».</li>
+  <li>Раздел <b>Настройки DNS → «Вручную»</b>: IPv-адрес DNS: <code class="k">147.45.114.74</code> (второй оставьте или тоже <code class="k">147.45.114.74</code>).</li>
+  <li>MTU — «Автоматически», прокси — «Не использовать». Сохраните и <b>проверьте соединение с Интернетом</b>.</li>
+</ol>
+<div class="note">Если PS получает IPv6 — отключите IPv6 на роутере или пропишите там <code class="k">2a0d:6c2:17:51b::</code>.</div></div>
+
+<h2 id="win">💻 Windows 11 / 10</h2>
+<div class="card">
+<p><b>Рекомендуемый способ (Windows 11 — DoH):</b></p><ol>
+  <li><b>Параметры → Сеть и Интернет → Wi-Fi/Ethernet → Свойства оборудования</b>.</li>
+  <li>«Назначение DNS-сервера» → <b>Изменить</b> → «Вручную», включите IPv4.</li>
+  <li>Предпочтительный: <code class="k">147.45.114.74</code>.</li>
+  <li>«Предпочтительное шифрование DNS» → <b>«Только шифрование (DNS через HTTPS)»</b> → введите URL:</li>
+</ol>
+<div class="code"><span>https://smartdns.147-45-114-74.sslip.io/dns-query</span><button class="copy" data-copy="https://smartdns.147-45-114-74.sslip.io/dns-query">копировать</button></div>
+<p><b>Стандартный способ (Windows 10 и раньше):</b></p><ol>
+  <li>Панель управления → Центр управления сетями → ваше подключение → <b>Свойства</b>.</li>
+  <li><b>«IP версии 4 (TCP/IPv4)» → Свойства → «Использовать следующие адреса DNS»</b> → <code class="k">147.45.114.74</code>. OK.</li>
+  <li>В консоли: <code class="k">ipconfig /flushdns</code> для сброса кэша.</li>
+</ol></div>
+
+<h2 id="mac">🍏 macOS (Monterey и новее)</h2>
+<div class="card"><ol>
+  <li><b>Системные настройки → Wi-Fi (или Сеть) → Подробности</b> у активного подключения → вкладка <b>DNS</b>.</li>
+  <li>Нажмите <b>«+»</b> и добавьте <code class="k">147.45.114.74</code> (и при желании <code class="k">2a0d:6c2:17:51b::</code>). Удалите прежние серверы или поставьте наши первыми.</li>
+  <li>OK. Сброс кэша: <code class="k">sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder</code>.</li>
+</ol></div>
+
+<h2 id="android">📱 Android 9+</h2>
+<div class="card"><p>Проще всего — <b>Private DNS</b> (шифрованный DoT):</p><ol>
+  <li><b>Настройки → Подключения / Сеть и Интернет → Другое / Дополнительно → Частный DNS-сервер</b> (встречается как «Private DNS»).</li>
+  <li>Выберите <b>«Имя хоста поставщика частного DNS-сервера»</b>.</li>
+  <li>Введите и сохраните:</li>
+</ol>
+<div class="code"><span>smartdns.147-45-114-74.sslip.io</span><button class="copy" data-copy="smartdns.147-45-114-74.sslip.io">копировать</button></div>
+<p>Или обычный DNS по Wi-Fi: удерживайте сеть → «Изменить сеть» → «Дополнительно» → Настройки IP: «Статический» → DNS 1: <code class="k">147.45.114.74</code>.</p>
+<div class="note">Private DNS действует для всех сетей и мобильного трафика. Для мобильного интернета это самый надёжный способ на Android.</div></div>
+
+<h2 id="ios">📱 iPhone / iPad (iOS 14+)</h2>
+<div class="card">
+<p><b>Способ 1 — профиль (автоматически настроит DoH):</b></p><ol>
+  <li>Откройте в <b>Safari</b>: <a href="/ios/eurodns.mobileconfig">/ios/eurodns.mobileconfig</a></li>
+  <li>Разрешите загрузку профиля → <b>Настройки → Профиль загружен → Установить</b>.</li>
+</ol>
+<p><b>Способ 2 — вручную (iOS 17+ / DNS-настройки):</b></p><ol>
+  <li>Настройки → Wi-Fi → (i) у сети → <b>Настройки DNS → Профиль</b> → Добавить сервер DNS → URL DoH:</li>
+</ol>
+<div class="code"><span>https://smartdns.147-45-114-74.sslip.io/dns-query</span><button class="copy" data-copy="https://smartdns.147-45-114-74.sslip.io/dns-query">копировать</button></div>
+</div>
+
+<h2 id="router">🏠 Роутер (весь дом одним махом)</h2>
+<div class="card"><p>В панели роутера раздел <b>WAN / Интернет / LAN → DNS-серверы</b>. Поставьте:</p>
+<div class="code"><span>IPv4 DNS: 147.45.114.74</span><button class="copy" data-copy="147.45.114.74">копировать</button></div>
+<p>Примеры размещения по вендорам:</p>
+<ul>
+  <li><b>Keenetic:</b> Интернет → Wi-Fi/PPP-соединение → «Использовать эти DNS-серверы» → <code class="k">147.45.114.74</code>; в «Система → Сетовые правила» можно включить DNS-over-TLS к <code class="k">smartdns.147-45-114-74.sslip.io</code>.</li>
+  <li><b>TP-Link / Mercusys:</b> Advanced → DHCP → DNS (или Internet → DNS) → основной/резервный <code class="k">147.45.114.74</code>.</li>
+  <li><b>ASUS:</b> WAN → Internet Connect → «These DNS servers» → <code class="k">147.45.114.74</code>.</li>
+  <li><b>D-Link:</b> Network Settings → Internet Connection → Manual DNS → <code class="k">147.45.114.74</code>.</li>
+  <li><b>MikroTik:</b> IP → DNS → Servers: <code class="k">147.45.114.74</code> (+ `DoT-Server=smartdns.147-45-114-74.sslip.io`).</li>
+  <li><b>OpenWrt:</b> Network → Interfaces → DHCP/DNS → «Use custom DNS» = <code class="k">147.45.114.74</code>; для DoH — пакет <code class="k">odoh</code> или <code class="k">smartdns</code>.</li>
+  <li><b>Xiaomi / Huawei / ZTE / Tenda / SNR:</b> «Настройки LAN» или «WAN» → «DNS» вручную → <code class="k">147.45.114.74</code>.</li>
+</ul>
+<div class="note"><b>Отключите IPv6 на роутере</b> (или пропишите там же IPv6 DNS <code class="k">2a0d:6c2:17:51b::</code>), иначе устройства могут частично резолвиться мимо EuroDNS.</div></div>
+
+<h2 id="browser">🌐 Только в браузере (DoH)</h2>
+<div class="card">
+<p><b>Chrome / Edge / Opera / Яндекс.</b> Настройки → Конфиденциальность и безопасность → Безопасность → «Использовать безопасный DNS-сервер» → «С другим поставщиком»:</p>
+<div class="code"><span>https://smartdns.147-45-114-74.sslip.io/dns-query</span><button class="copy" data-copy="https://smartdns.147-45-114-74.sslip.io/dns-query">копировать</button></div>
+<p><b>Firefox.</b> Настройки → Приватность и защита → «DNS через HTTPS» → «Максимальная защита» → «Выбрать провайдер: По выбору» → тот же URL.</p>
+<div class="note">Этот способ влияет только на трафик браузера (другие приложения и игры — нет).</div></div>
+
+<h2 id="tv">📺 Smart TV (Samsung / LG) и приставки</h2>
+<div class="card"><p>На ТВ DNS обычно задаётся только при настройке сети вручную (IPv4 → DNS → <code class="k">147.45.114.74</code>). Если ТВ не даёт задать DNS — настройте DNS на <b>роутере</b> (см. выше) или раздайте Wi-Fi с нужными DNS. На Android TV: Настройки → Сеть → «Частный DNS» → <code class="k">smartdns.147-45-114-74.sslip.io</code>.</p></div>
+
+<div class="ok"><b>Как убедиться, что работает:</b> на этом устройстве откройте страницу <a href="/test/">/test/</a> (будет зелёным) или зайдите на <code class="k">gemini.google.com</code> — сообщение «not supported in your country» быть не должно.</div>
+
+<p style="margin:34px 0 10px"><a class="btn" href="/test/">Открыть страницу проверки</a> &nbsp; <a class="btn ghost" href="/">← На главную</a></p>
+</div>
+
+<footer><div class="wrap">EuroDNS — Smart DNS. Независимый технический инструмент, предоставляется «как есть». © 2025–2026.</div></footer>
+<script>
+document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.copy);const t=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=t,1300)}));
+</script>
+</body>
+</html>

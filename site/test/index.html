@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка подключения — EuroDNS</title>
+<style>
+:root{--bg:#0b0f19;--card:#151d30;--line:#232e47;--txt:#e7ecf5;--mut:#9fb0cc;--acc:#4f8cff;--ok:#2ecc71;--bad:#ff5c6c;--warn:#f5a623}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(1000px 500px at 80% -10%,#16233f,#0b0f19);color:var(--txt);font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+a{color:var(--acc);text-decoration:none}.wrap{max-width:820px;margin:0 auto;padding:40px 20px}
+h1{font-size:34px;margin:0 0 6px}h2{font-size:20px;margin:26px 0 8px}.sub{color:var(--mut);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;margin:14px 0}
+.big{border-radius:16px;padding:22px;text-align:center;font-size:20px;font-weight:800;margin:18px 0}
+.big.ok{background:rgba(46,204,113,.12);color:var(--ok);border:1px solid rgba(46,204,113,.4)}
+.big.no{background:rgba(255,92,108,.12);color:var(--bad);border:1px solid rgba(255,92,108,.4)}
+.big.wait{background:rgba(245,166,35,.12);color:var(--warn);border:1px solid rgba(245,166,35,.4)}
+.kv{display:flex;justify-content:space-between;gap:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+.kv:last-child{border-bottom:0}.kv b{font-family:ui-monospace,Menlo,Consolas,monospace;color:#cfe0ff;text-align:right}
+.btn{display:inline-block;padding:11px 18px;border-radius:12px;font-weight:700;background:linear-gradient(135deg,var(--acc),#7c5cff);color:#fff;border:0;cursor:pointer;font-size:15px}
+.note{border-left:3px solid var(--warn);background:#1b1710;padding:12px 16px;border-radius:8px;color:#e7d9b8;margin:14px 0}
+.oknote{border-left:3px solid var(--ok);background:#0f1a13;padding:12px 16px;border-radius:8px;color:#c6efd5;margin:14px 0}
+code{font-family:ui-monospace,Menlo,Consolas,monospace;background:#0e1524;border:1px solid var(--line);padding:2px 7px;border-radius:6px;color:#cfe0ff}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.tab{padding:9px 13px;border-radius:10px;border:1px solid var(--line);background:var(--bg2,#111726);color:var(--mut);cursor:pointer;font-size:14px}
+.tab.active{background:linear-gradient(135deg,var(--acc),#7c5cff);color:#fff;border-color:transparent}
+.panel{display:none}.panel.active{display:block}
+.copy{cursor:pointer;background:#12203c;border:1px solid #1e3661;color:var(--acc);border-radius:8px;padding:4px 10px;font-family:system-ui;font-size:12px}
+footer{border-top:1px solid var(--line);padding:28px 0 60px;color:var(--mut);font-size:14px}
+</style>
+</head>
+<body><div class="wrap">
+<h1>Проверка подключения EuroDNS</h1>
+<p class="sub">Проверка выполняется <b>на вашем устройстве</b> — мы определяем, через какую страну виден ваш трафик прямо сейчас.</p>
+
+<div id="status" class="big wait">Определяем ваше устройство…</div>
+
+<div class="card" id="geo">
+  <div class="kv"><span>Ваш IP (как видит сеть)</span><b id="ip">—</b></div>
+  <div class="kv"><span>Страна</span><b id="country">—</b></div>
+  <div class="kv"><span>Город</span><b id="city">—</b></div>
+  <div class="kv"><span>Провайдер</span><b id="isp">—</b></div>
+</div>
+
+<div id="okbox" class="oknote" style="display:none">
+  ✅ <b>Устройство использует EuroDNS.</b> Вы видны как <b>Нидерланды (EU)</b> — региональные ограничения
+  (Gemini, ChatGPT, Xbox Live, Spotify и др.) обходятся. Откройте <code>gemini.google.com</code>: сообщения
+  «not supported in your country» быть не должно.
+</div>
+<div id="badbox" class="note" style="display:none">
+  ⚠️ <b>Устройство НЕ использует EuroDNS</b> — оно видно как <b id="badcountry">другая страна</b>.
+  Значит запросы идут мимо нашего шлюза, и гео-ограничения (включая блок на <code>gemini.google.com</code>)
+  остаются. Исправьте настройки DNS на устройстве — см. ниже.
+</div>
+
+<h2>Как настроить устройство</h2>
+<p class="sub">Главное правило: DNS должен быть прописан <b>на самом устройстве / роутере</b>. Установка только в браузере не затрагивает игры и приложения.</p>
+<div class="tabs" id="tabs">
+  <div class="tab active" data-t="android">Android</div>
+  <div class="tab" data-t="chrome">Chrome (телефон/ПК)</div>
+  <div class="tab" data-t="ios">iPhone/iPad</div>
+  <div class="tab" data-t="win">Windows</div>
+  <div class="tab" data-t="router">Роутер</div>
+</div>
+
+<div class="panel active" data-p="android">
+  <div class="card">
+    <p><b>Вариант А (надёжный): частный DNS (DoT)</b></p>
+    <ol><li>Настройки → Сеть / Подключения → Дополнительно → <b>Частный DNS-сервер</b>.</li>
+    <li>Имя хоста: <code>smartdns.147-45-114-74.sslip.io</code> → Сохранить.</li></ol>
+    <p><b>Вариант Б (если вариант А не работает — Chrome может его игнорировать):</b> в самом Chrome —
+      Настройки → Конфиденциальность → <b>Безопасность → Безопасный DNS</b> → «С другим поставщиком» → вставьте наш DoH:</p>
+    <div class="kv" style="border:0"><code>https://smartdns.147-45-114-74.sslip.io/dns-query</code><button class="copy" data-copy="https://smartdns.147-45-114-74.sslip.io/dns-query">копировать</button></div>
+    <p class="sub">Если сеть блокирует порт 853 (DoT), но не блокирует DoH — вариант Б сработает.</p>
+  </div>
+</div>
+<div class="panel" data-p="chrome">
+  <div class="card">
+    <p>Chrome может использовать <b>свой</b> безопасный DNS и игнорировать системный. Чтобы точно пускать
+      <code>gemini.google.com</code> через EuroDNS, укажите наш DoH прямо в Chrome:</p>
+    <ol><li>Настройки → Конфиденциальность и безопасность → Безопасность.</li>
+    <li>«Использовать безопасный DNS-сервер» → вкл → «С другим поставщиком».</li>
+    <li>Вставьте: <code>https://smartdns.147-45-114-74.sslip.io/dns-query</code></li></ol>
+    <div class="kv" style="border:0"><code>https://smartdns.147-45-114-74.sslip.io/dns-query</code><button class="copy" data-copy="https://smartdns.147-45-114-74.sslip.io/dns-query">копировать</button></div>
+  </div>
+</div>
+<div class="panel" data-p="ios">
+  <div class="card">
+    <p>В Safari откройте <a href="/ios/eurodns.mobileconfig">профиль EuroDNS</a> и установите его (Настройки → Профиль загружен).
+       Или вручную (iOS 17+): Wi-Fi → (i) → Настройки DNS → URL DoH:
+       <code>https://smartdns.147-45-114-74.sslip.io/dns-query</code>.</p>
+  </div>
+</div>
+<div class="panel" data-p="win">
+  <div class="card">
+    <p>Панель управления → Центр управления сетями → подключение → Свойства → <b>IP версии 4 (TCP/IPv4)</b> →
+       «Использовать следующие DNS» → <code>147.45.114.74</code>. Или в Windows 11 укажите DoH-URL
+       <code>https://smartdns.147-45-114-74.sslip.io/dns-query</code> в параметрах сети.</p>
+  </div>
+</div>
+<div class="panel" data-p="router">
+  <div class="card">
+    <p>В панели роутера (WAN/LAN → DNS) впишите <code>147.45.114.74</code> и отключите IPv6 (или пропишите
+       IPv6 <code>2a0d:6c2:17:51b::</code>). Тогда все устройства дома сразу работают через EuroDNS.</p>
+  </div>
+</div>
+
+<p style="margin-top:20px">
+  <button class="btn" id="re">Проверить снова</button>
+  <a class="btn" href="/">← На главную</a>
+</p>
+<p class="sub">После изменения DNS нажмите «Проверить снова» — статус должен стать зелёным и страна изменится на Нидерланды.</p>
+</div>
+
+<footer><div class="wrap">EuroDNS — Smart DNS. Проверка выполняется с вашего устройства через публичный geo-API, чтобы показать, через какую страну виден ваш трафик. © 2025–2026.</div></footer>
+
+<script>
+document.querySelectorAll('.copy').forEach(b=>b.addEventListener('click',()=>{navigator.clipboard.writeText(b.dataset.copy);const t=b.textContent;b.textContent='✓';setTimeout(()=>b.textContent=t,1300)}));
+document.querySelectorAll('#tabs .tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('#tabs .tab').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  t.classList.add('active');
+  document.querySelector('.panel[data-p="'+t.dataset.t+'"]').classList.add('active');
+}));
+
+const NL_PREFIX='147.45.114.74';
+async function run(){
+  const s=document.getElementById('status');
+  s.className='big wait'; s.textContent='Определяем ваше устройство…';
+  document.getElementById('okbox').style.display='none';
+  document.getElementById('badbox').style.display='none';
+  try{
+    const r=await fetch('https://ipwho.is/',{cache:'no-store'});
+    const d=await r.json();
+    document.getElementById('ip').textContent=d.ip||'—';
+    document.getElementById('country').textContent=d.country||'—';
+    document.getElementById('city').textContent=d.city||'—';
+    document.getElementById('isp').textContent=(d.connection&&d.connection.isp)||'—';
+    const viaEU = (d.ip&&d.ip.indexOf(NL_PREFIX)===0) || (d.country_code==='NL') || (d.country==='Netherlands');
+    if(viaEU){
+      s.className='big ok'; s.textContent='✅ EuroDNS активен — вы видны как Нидерланды (EU)';
+      document.getElementById('okbox').style.display='block';
+    }else{
+      s.className='big no'; s.textContent='⚠️ Устройство НЕ использует EuroDNS';
+      document.getElementById('badcountry').textContent=(d.country||'другая страна')+' ('+(d.country_code||'')+')';
+      document.getElementById('badbox').style.display='block';
+    }
+  }catch(e){
+    s.className='big no'; s.textContent='Ошибка проверки: '+e.message;
+    document.getElementById('badbox').style.display='block';
+    document.getElementById('badcountry').textContent='нет сети / заблокирован geo-API';
+  }
+}
+document.getElementById('re').addEventListener('click',run);
+run();
+</script>
+</body>
+</html>

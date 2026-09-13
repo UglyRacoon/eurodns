@@ -1,0 +1,16 @@
+[Unit]
+Description=EuroDNS backend (DoH + self-test API)
+After=network-online.target dnsmasq.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/opt/smartdns/env.conf
+ExecStart=/usr/bin/python3 /opt/smartdns/smartdns_backend.py
+Restart=on-failure
+RestartSec=2
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
