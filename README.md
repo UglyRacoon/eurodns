@@ -50,6 +50,7 @@ through the proxy, so you keep full line speed.
 ```
 eurodns/
 ├─ deploy.sh                     # ⭐ one-shot installer for any Linux (Debian/Ubuntu) server
+├─ uninstall.sh                  # cleanly reverses deploy.sh (services, configs, cert, dirs)
 ├─ build.sh                      # regenerates dnsmasq + nginx maps from domains.txt
 ├─ domains.txt                   # the list of geo-restricted domains to unblock
 ├─ backend/
@@ -170,6 +171,16 @@ regardless of country — move the egress to another provider (the software is f
   (`/etc/letsencrypt/renewal-hooks/deploy/00-eurodns.sh`) reloads nginx + DoT.
 * **Config lives on the server** under `/opt/smartdns` (env), `/etc/nginx`, `/etc/dnsmasq.d`,
   `/etc/stunnel`; the website under `/var/www/smartdns`.
+
+### Uninstall
+```bash
+sudo ./uninstall.sh              # removes services + configs + cert + /opt|/var/www dirs
+```
+Flags: `--yes` (no prompt), `--purge-packages` (also apt-purge nginx/dnsmasq/stunnel/certbot —
+only if nothing else on the box uses them), `--keep-cert`, `--keep-data`. It stops and disables
+`smartdns-backend` and `eurodns-dot`, deletes the nginx site/stream include (and the managed
+line from `nginx.conf`, restoring the stock default site), removes the dnsmasq geo config and
+stunnel conf, deletes the certbot deploy hook and (optionally) the certificate.
 
 ### Coexisting with an existing SNI fronting
 `deploy.sh` writes a **standalone** `stream{}` include set
