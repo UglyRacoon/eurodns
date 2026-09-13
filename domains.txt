@@ -1,6 +1,19 @@
 gemini.google.com
 google.com
 accounts.google.com
+# --- Google ecosystem: region/availability checks + static assets live here ---
+# Gemini/YouTube/etc. call *.googleapis.com to decide "supported in your country";
+# those must egress from the EU box too, or Google still sees the client's real region.
+googleapis.com
+gstatic.com
+googleusercontent.com
+ggpht.com
+googleblog.com
+withgoogle.com
+recaptcha.net
+youtube.com
+youtu.be
+ytimg.com
 openai.com
 chatgpt.com
 claude.ai

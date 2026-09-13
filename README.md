@@ -8,13 +8,19 @@ a client app, and **without slowing down** normal traffic.
 It is a functional clone of the *xbox-dns.ru* concept, rebuilt with a modern,
 fully-scripted stack you can deploy on **any** Linux server in a few minutes.
 
-> ⚠️ **Important — the IP you unblock with matters.** A Smart DNS only works if the
-> server's **egress IP** is one the target service considers an *allowed* region.
-> Some low-cost "EU" hosts (e.g. certain VDSka / reseller ranges) are geo-flagged as
-> Russia by Google specifically, so Google services (Gemini, YouTube) stay blocked
-> even though Cloudflare/MaxMind see the same IP as the Netherlands. **Choose a host
-> whose ASN Google trusts** (netcup, Hetzner, OVH, DigitalOcean, Scaleway, AWS, …).
-> This is a property of the IP, not of the software.
+> 🔧 **The usual reason a Google service still says "not supported in your country".**
+> It is almost always **coverage**, not your server's location. Google's
+> availability/region check does **not** happen on `gemini.google.com` — the page makes a
+> second request to `*.googleapis.com` (and assets on `gstatic.com` / `googleusercontent.com`,
+> YouTube on `youtube.com`/`googlevideo.com`). If your Smart DNS only rewrites
+> `google.com`, that region call hits Google **directly from the client's real (RU) IP** →
+> blocked. EuroDNS maps the **whole Google family** (see [`domains.txt`](domains.txt)), so the
+> region check also egresses from the EU box. `deploy.sh` + `build.sh` apply this automatically.
+>
+> > As a *secondary* check, confirm your server's **egress IP** itself is an allowed region:
+> > open `https://gemini.google.com` **on the server** (or `whoer.net`) — if *that* loads
+> > unblocked, your IP/provider is fine and any remaining block is purely coverage. (Cheap
+> > reseller ranges can occasionally be geo-mislabelled, but this is rare and not the common cause.)
 
 ---
 
@@ -142,23 +148,28 @@ automatically), then:
 
 ## Verifying it works (real, not just "IP looks EU")
 
-A device-side check is what actually proves the unblock. Two ways:
+A device-side check is what actually proves the unblock. Three ways, most→least decisive:
 
-1. On the device, open `https://<host>/test/` — it shows the country the *device's*
+1. **On the device**, open `https://<host>/test/` — it shows the country the *device's*
    requests appear from (via a geo API that is itself proxied).
-2. From a client using the service:
+2. **Coverage from the client** — the *region* call must route through the box too:
 
    ```bash
-   # DNS rewrite present?
-   dig @<your-IPv4> gemini.google.com +short        # -> <your-IPv4>
-
-   # what does Google's OWN geo say about the egress? (the real gatekeeper)
-   curl -s --resolve gemini.google.com:443:<your-IPv4> https://www.google.com/ \
-        | grep -oE 'google\.ru|hl=ru&' | head -1     # empty = good; google.ru = your ASN is geo-flagged
+   # BOTH must return the proxy IP — googleapis is the one that gates Gemini:
+   dig @<your-IPv4> gemini.google.com                  +short   # -> <your-IPv4>
+   dig @<your-IPv4> generativelanguage.googleapis.com  +short   # -> <your-IPv4>  (NOT a 172.217.x RU edge)
    ```
+   If `generativelanguage.googleapis.com` returns a real Google IP, add it (it is
+   already in `domains.txt`); without it Gemini keeps showing "not supported…".
+3. **The egress is seen as EU by Google** — confirm once, then forget it: open
+   `https://gemini.google.com` **on the server itself** (or `whoer.net`). Unblocked there =
+   your provider/IP is clean, and any block on a client is purely a coverage gap. You can
+   also see the tunnel reach Google's real edge (`server: ... HTTPServer2`, low `dur`):
 
-If step 2 prints `google.ru`/`hl=ru` from your EU server, your IP is flagged by Google
-regardless of country — move the egress to another provider (the software is fine).
+   ```bash
+   curl -sI --resolve generativelanguage.googleapis.com:443:<your-IPv4> \
+        https://generativelanguage.googleapis.com/ | grep -iE '^HTTP/|^server:'
+   ```
 
 ---
 
@@ -211,7 +222,7 @@ and add the `server{}` once, so there is exactly **one** `stream{}` in the whole
 | DoH/DoT cert error | `<host>` doesn't resolve to the server, or :80 blocked. Re-run `deploy.sh` after fixing DNS. |
 | DNS returns real IP, not yours | Something else owns :53 (resolved/other). Check `ss -lntup \| grep :53`. |
 | nginx: `duplicate "stream" directive` | A `stream{}` already exists — see *Coexisting with existing fronting*. |
-| Google still says "unsupported in your country" | Your **egress IP ASN is geo-flagged as RU by Google**. Different provider needed (see top warning). |
+| Google still says "unsupported in your country" | Coverage gap: `*.googleapis.com` / `gstatic` / YouTube not proxied → the region call leaks your real IP. Ensure they're in `domains.txt` and `build.sh` ran, then `dig @IP generativelanguage.googleapis.com +short` must show your proxy IP (see *Verifying it works*). Only if the **server itself** is blocked on `gemini.google.com` is it the egress IP. |
 | Works on desktop, not phone in Chrome | Chrome ignores system Private DNS — set the DoH URL inside Chrome's *Secure DNS*. |
 
 ---
