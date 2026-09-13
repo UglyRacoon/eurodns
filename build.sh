@@ -1,34 +1,30 @@
 #!/bin/bash
 # EuroDNS generator: turns /opt/smartdns/domains.txt into
-#   - /etc/dnsmasq.d/10-smartdns-domains.conf  (address=/DOMAIN/IP fallback for the
-#     :5353 forwarder; the authoritative eurodns-resolver on :53 answers geo names,
-#     incl. the A/AAAA + HTTPS/SVCB records, before anything reaches dnsmasq)
-#   - /etc/nginx/smartdns/geo-map.inc          (nginx stream map: SNI -> real backend)
+#   - /etc/nginx/smartdns/geo-map.inc   (nginx stream map: SNI -> real backend:443)
 #
-# The resolver reads domains.txt directly, so after editing it run this (for the nginx
-# map) and `systemctl restart eurodns-resolver` (for the DNS/SVCB side).
+# DNS mapping is handled entirely by the authoritative eurodns-resolver (:53), which
+# reads /opt/smartdns/domains.txt directly and answers A/AAAA + HTTPS/SVCB for those
+# names (with a small never-proxy exception for captive-portal hosts). dnsmasq is only
+# a loopback forwarder (:5353) and MUST NOT carry per-domain address= rules, or it would
+# re-map exactly the connectivity-check hosts the resolver intentionally forwards.
+#
+# After editing domains.txt: run this (for the nginx map) then `systemctl restart
+# eurodns-resolver` (for DNS/SVCB) and reload nginx.
 #
 # Reads the proxy IPs from /opt/smartdns/env.conf (written by deploy.sh).
 set -euo pipefail
 
 ENV_FILE=${ENV_FILE:-/opt/smartdns/env.conf}
 DOM=${DOM:-/opt/smartdns/domains.txt}
-DNS_OUT=${DNS_OUT:-/etc/dnsmasq.d/10-smartdns-domains.conf}
 NGX_DIR=${NGX_DIR:-/etc/nginx/smartdns}
 NGX_OUT="$NGX_DIR/geo-map.inc"
 
-# load config
+# load config (IPV6 optional)
 if [ -f "$ENV_FILE" ]; then . "$ENV_FILE"; fi
 IP4=${IPV4:-}
-IP6=${IPV6:-}
+[ -n "$IP4" ] || { echo "ERROR: IPV4 not set in $ENV_FILE." >&2; exit 1; }
 
-if [ -z "$IP4" ]; then
-    echo "ERROR: IPV4 not set in $ENV_FILE — cannot map domains to a proxy IP." >&2
-    exit 1
-fi
-
-mkdir -p "$NGX_DIR" "$(dirname "$DNS_OUT")"
-: > "$DNS_OUT"
+mkdir -p "$NGX_DIR"
 : > "$NGX_OUT"
 
 n=0
@@ -36,11 +32,9 @@ while read -r d; do
     # strip comments + CR, skip blanks
     d=${d%%#*}; d=$(echo "$d" | tr -d '\r' | xargs || true)
     [ -z "$d" ] && continue
-    echo "address=/$d/$IP4" >> "$DNS_OUT"
-    [ -n "$IP6" ] && echo "address=/$d/$IP6" >> "$DNS_OUT"
     re=$(printf '%s' "$d" | sed 's/\./\\./g')
     printf '    ~(^|\\.)%s$  %s:443;\n' "$re" "$d" >> "$NGX_OUT"
     n=$((n+1))
 done < "$DOM"
 
-echo "EuroDNS: generated $n domains -> $DNS_OUT and $NGX_OUT"
+echo "EuroDNS: generated $n domains -> $NGX_OUT  (DNS/SVCB served by eurodns-resolver)"

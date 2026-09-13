@@ -35,8 +35,20 @@ def load_domains():
     return doms
 DOMAINS = load_domains()
 
+# OS/browser captive-portal & connectivity probes. These MUST resolve to the real
+# Google servers (they do an HTTP:80 /generate_204 that our 443-only proxy can't
+# answer), otherwise Android/Chrome mark the network "no internet" and stall.
+# Exact hostnames only -> never affects the geo-unblock of real services.
+NEVER = {
+    "connectivitycheck.gstatic.com", "connectivitycheck.android.com",
+    "connectivitycheck.google.com",
+    "clients2.google.com", "clients3.google.com", "clients4.google.com", "clients5.google.com",
+}
+
 def is_mapped(name):
     n = name.lower().rstrip(".")
+    if n in NEVER or any(n.endswith("." + s) for s in NEVER):
+        return False
     return any(n == d or n.endswith("." + d) for d in DOMAINS)
 
 # --- DNS wire helpers ------------------------------------------------------
@@ -162,24 +174,41 @@ def tcp_loop(fam=socket.AF_INET, addr="0.0.0.0"):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((addr, PORT)); s.listen(128)
     def serve(c):
+        # A DoT/TCP client (Android Private DNS, Chrome) keeps ONE connection open and
+        # pipelines MANY queries over it. Serve them in a loop until the peer closes;
+        # closing after a single answer makes Android fail with "Couldn't connect".
+        c.settimeout(60)
         try:
-            ln = c.recv(2)
-            if len(ln) < 2: return
-            (n,) = struct.unpack(">H", ln)
-            data = b""
-            while len(data) < n:
-                chunk = c.recv(n - len(data))
-                if not chunk: return
-                data += chunk
-            name, qtype, _q, _ = parse_question(data)
-            if is_mapped(name):
-                rrs = answer_for(name, qtype)
-                resp = build_response(data, name, qtype, rrs) if rrs is not None else forward(data)
-            else:
-                resp = forward(data)
-            c.sendall(struct.pack(">H", len(resp)) + resp)
+            while True:
+                ln = c.recv(2)
+                if len(ln) < 2:
+                    return
+                (n,) = struct.unpack(">H", ln)
+                if n == 0:
+                    return
+                data = b""
+                while len(data) < n:
+                    chunk = c.recv(n - len(data))
+                    if not chunk:
+                        return
+                    data += chunk
+                try:
+                    name, qtype, _q, _ = parse_question(data)
+                except Exception:
+                    name, qtype = None, None
+                if name and is_mapped(name):
+                    rrs = answer_for(name, qtype)
+                    resp = build_response(data, name, qtype, rrs) if rrs is not None else forward(data)
+                else:
+                    resp = forward(data)
+                c.sendall(struct.pack(">H", len(resp)) + resp)
+        except Exception:
+            return
         finally:
-            c.close()
+            try:
+                c.close()
+            except Exception:
+                pass
     while True:
         c, _ = s.accept()
         threading.Thread(target=serve, args=(c,), daemon=True).start()

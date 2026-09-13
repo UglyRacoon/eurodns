@@ -29,7 +29,8 @@ fully-scripted stack you can deploy on **any** Linux server in a few minutes.
 ```
  client (Xbox / phone / PC)                EuroDNS server (EU)               real service
         │  ① "what's gemini.google.com?" │                                  │
-        ├──────────────DNS───────────────►│  dnsmasq answers = PROXY_IP ─────┤
+        ├──────────────DNS───────────────►│ resolver answers = PROXY_IP ─────┤
+        │  ①' HTTPS/SVCB hint alpn=h2     │  + SVCB(alpn=h2, hint=PROXY_IP)   │
         │  ② TLS connect, SNI=gemini…     │                                  │
         ├──────────:443 (ssl_preread)────►│  nginx stream forwards RAW TLS ─►│  (sees EU IP ✔)
         │                                  │  to the REAL gemini.google.com   │
